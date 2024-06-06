@@ -783,50 +783,6 @@ const updatepassword = async (req, res) => {
 
 
 
-const googleLogin = async (req, res) => {
-  
-  const [existingUser] = await sequelize.query('SELECT * FROM users WHERE email = ? ',
-    { replacements: [req.user.email], type: QueryTypes.SELECT });
-
-    if (!existingUser) {
-      const result = await sequelize.query(
-        'INSERT INTO users (email, name, password, loginType) VALUES (?, ?, ?, ?)',
-        {
-          replacements: [req.user.email, req.user.name, null, 'google'],
-          type: QueryTypes.INSERT
-        }
-      );
-      res.redirect('http://localhost:3000');
-    } else if(existingUser){
-
-
-      const [existingUserLoginWith] = await sequelize.query('SELECT loginType FROM users WHERE email = ? ',
-      { replacements: [req.user.email], type: QueryTypes.SELECT });
-
-      console.log(existingUserLoginWith.loginType);
-
-      if(existingUserLoginWith.loginType == 'google'){
-        const token = generateToken(existingUser);
-        console.log(token);
-        res.cookie("token", token);
-        const decoded = jwt.verify(token, 'crud');
-        console.log(decoded);
-        
-        console.log(existingUser.id);
-        console.log("user login with google" , token);
-        res.redirect('http://localhost:3000/allPost');
-        
-      }else{
-        console.log("user not login with google");
-      }
-      
-
-    }else{
-      res.message('faileld');
-    }
-
-}
-
 
 
 
@@ -953,10 +909,10 @@ const getAllUsersIfFollow = async (req, res) => {
         type: sequelize.QueryTypes.SELECT
       }
     );
-    res.json(users);
+    res.status(200).json({error: false,message:"User Fetch",chatUser: users});
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({error: true, message: 'Internal server error' });
   }
 };
 
@@ -967,83 +923,102 @@ const getAllUsersIfFollow = async (req, res) => {
 
 const createRoom = async (req, res) => {
   try {
-    const {userId, selectedUsers } = req.body;
+    const { userId, selectedUsers } = req.body;
 
+    // Assuming `userId` is the ID of the current user creating the room
 
-    const userSelected_id = JSON.stringify(selectedUsers);
-
-    console.log(userSelected_id);
-    console.log(req.body);
-    console.log(selectedUsers);
-
-    const users = await sequelize.query(
-      'INSERT INTO rooms (user_id, created_user_id) VALUES (?, ?)',
+    // Insert into chat_rooms table
+    const result = await sequelize.query(
+      'INSERT INTO rooms (user_id) VALUES (?)',
       {
-        replacements: [userSelected_id, userId],
+        replacements: [userId],
         type: sequelize.QueryTypes.INSERT
       }
     );
-    res.json("Room Created Successfully");
+
+    const roomId = result[0]; // Assuming the ID of the created room is returned
+
+    // Insert participants into chat_room_participants table
+    for (const participant of selectedUsers) {
+      await sequelize.query(
+        'INSERT INTO room_participants (room_id, user_id) VALUES (?, ?)',
+        {
+          replacements: [roomId, participant],
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+    }
+    res.status(200).json({ error: false,message: 'Room Created Successfully' });
   } catch (error) {
     console.error('Error creating room:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: true,message: 'Internal server error' });
   }
 };
-
-
 
 const findRoomByUserId = async (req, res) => {
   try {
-    const {userId } = req.body;
+    const { userId } = req.body;
 
-    console.log(userId, "login user find room user id ");
+    // Validate userId
+    if (!userId) {
+      return res.status(400).json({ error: 'UserId is required' });
+    }
 
-    const rooms = await sequelize.query(
-      'SELECT user_id FROM rooms ',
+    // Fetch rooms where the user is either the creator or a participant
+    const roomsQuery = await sequelize.query(
+      `
+      SELECT DISTINCT rooms.id, rooms.user_id, rooms.created_at
+      FROM rooms
+      LEFT JOIN room_participants ON rooms.id = room_participants.room_id
+      WHERE rooms.user_id = ? OR room_participants.user_id = ?
+      `,
       {
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
-    
-
-
-    // find room where my id is avilable in user_id or created_user_id if any place my userid is avilable then show perticuler room
-
-    console.log(rooms[0].user_id);
-
-    const finduserIdFromRoom = rooms[0].user_id.includes(userId); 
-    console.log(finduserIdFromRoom);
-
-    const roomsCreatedId = await sequelize.query(
-      'SELECT created_user_id FROM rooms WHERE created_user_id = ?',
-      {
-        replacements: [userId],
-        type: sequelize.QueryTypes.SELECT,
+        replacements: [userId, userId],
+        type: sequelize.QueryTypes.SELECT
       }
     );
 
-    // const finduserIdFromCreatedRoom = roomsCreatedId[0].created_user_id == userId; 
+    if (roomsQuery.length === 0) {
+      return res.status(404).json({ error:true,message: 'No rooms found for this user' });
+    }
 
-    // console.log(roomsCreatedId, finduserIdFromCreatedRoom);
-
-
-    console.log(roomsCreatedId);
-
-
-    if(finduserIdFromRoom || roomsCreatedId){
-      const roomsGet = await sequelize.query(
-        'SELECT * FROM rooms ',
+    // Fetch participants for each room
+    const roomDetails = await Promise.all(roomsQuery.map(async (room) => {
+      const participantsQuery = await sequelize.query(
+        `
+        SELECT register.id, register.name
+        FROM room_participants
+        JOIN register ON room_participants.user_id = register.id
+        WHERE room_participants.room_id = ?
+        `,
         {
-          type: sequelize.QueryTypes.SELECT,
+          replacements: [room.id],
+          type: sequelize.QueryTypes.SELECT
         }
       );
-      res.json(roomsGet);
-    }
+
+      return {
+        room: {
+          id: room.id,
+          user_id: room.user_id,
+          created_at: room.created_at
+        },
+        participants: participantsQuery
+      };
+    }));
+
+    res.status(200).json({error: false,message: "Room Fetch", roomDetails: roomDetails});
   } catch (error) {
-    console.error('Error finding room by user ID:', error);
+    console.error('Error fetching rooms:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+
+
+
+
 
 
 
@@ -1062,7 +1037,6 @@ module.exports = {
   findRoomByUserId,
   getUserProfile,
   getImage,
-  googleLogin,
   OTPVerify,
   sendPasswordOTP,
   OTPVerifyEmail,

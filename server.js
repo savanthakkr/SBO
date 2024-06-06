@@ -16,22 +16,22 @@ const session = require('express-session');
 const { googleLogin } = require('./controllers/userController');
 
 // Passport configuration
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
- callbackURL: "http://localhost:5000/api/auth/google/callback"
-}, (accessToken, refreshToken, profile, cb) => {
-  // User has authenticated, return the user profile
-  return cb(null, profile._json);
-}));
+// passport.use(new GoogleStrategy({
+//   clientID: process.env.GOOGLE_CLIENT_ID,
+//   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//  callbackURL: "http://localhost:5000/api/auth/google/callback"
+// }, (accessToken, refreshToken, profile, cb) => {
+//   // User has authenticated, return the user profile
+//   return cb(null, profile._json);
+// }));
 
-passport.serializeUser((user, next)=>{
-  return next(null, user)
-})
+// passport.serializeUser((user, next)=>{
+//   return next(null, user)
+// })
 
-passport.deserializeUser((user, next)=>{
-  return next(null, user)
-})
+// passport.deserializeUser((user, next)=>{
+//   return next(null, user)
+// })
 
 // Session configuration
 const sessionConfig = {
@@ -65,9 +65,9 @@ testConnection()
       scope: ['profile', 'email']
     }));
     
-    app.get('/api/auth/google/callback', passport.authenticate('google', {
-      failureRedirect: '/login',
-    }), googleLogin);
+    // app.get('/api/auth/google/callback', passport.authenticate('google', {
+    //   failureRedirect: '/login',
+    // }), googleLogin);
 
     const server = http.createServer(app);
     socketFunction(server);
