@@ -1229,6 +1229,7 @@ const updateBusinessProfile = async (req, res) => {
     }
   } catch (error) {
     console.error('Error updating Business Profile:', error);
+    
     res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
