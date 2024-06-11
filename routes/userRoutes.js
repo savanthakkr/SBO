@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const { registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
+const {getAllUserPrductService, createProduct, deleteRequirement, updateBusinessProfile, updateRequirementStatus, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers } = userController; 
 
 // Register a new user
@@ -11,7 +11,11 @@ router.post('/users/register', registerUser);
 
 router.post('/users/passwordOTP', sendPasswordOTP);
 
-
+router.post('/users/sendMessage', sendMessage);
+router.post('/users/getMessages', getMessages);
+router.post('/users/updateRequirementStatus', updateRequirementStatus);
+router.post('/users/deleteRequirement', deleteRequirement);
+router.post('/users/updateBusinessProfile', updateBusinessProfile);
 
 router.post('/sendMessageRoom/:id',verifyToken, sendMessageRoom);
 
@@ -26,6 +30,8 @@ router.post('/users/updateType', updateUserType);
 router.post('/users/createProfile', createUserProfile);
 router.post('/users/createBusinessProfile', createBusinessProfile);
 router.post('/users/createRequirement', createRequirement);
+router.post('/users/createProduct', createProduct);
+router.post('/users/getAllUserPrductService', getAllUserPrductService);
 router.post('/users/fetchAllUsers', getAllUsers);
 router.post('/users/getAllUsersIfFollow', getAllUsersIfFollow);
 router.post('/users/fetchAllUserRequirments', getAllUserRequirements);
@@ -41,7 +47,7 @@ router.post('/users/getFollowAllUsers', getFollowAllUsers);
 
 router.post('/users/createRoom', createRoom);
 router.post('/users/findRoomByUserId', findRoomByUserId);
-
+router.post('/users/updateUserProfile', updateUserProfile); 
 
 // Get user profile by id
 router.get('/users/profile',verifyToken, getUserProfile);
@@ -55,7 +61,7 @@ router.get('/findRoomByUserId/:id',verifyToken, findRoomByUserId);
 // Update user profile 
 router.put('/users/editProfile/:id',verifyToken, getImage); 
 
-router.put('/users/editProfile',verifyToken, updateUserProfile); 
+
 
 
 router.put('/users/updatePass',verifyToken, updatepassword); 
