@@ -1105,10 +1105,174 @@ const findRoomByUserId = async (req, res) => {
 
 
 
+const sendMessage = async (req, res) => {
+  try{
+    const { content, senderId, receiverId } = req.body;
+  console.log(req.body);
+
+  await sequelize.query(
+    'INSERT INTO message (senderId, reciverId, content) VALUES (?, ?, ?)',
+    {
+      replacements: [senderId, receiverId, content],
+      type: sequelize.QueryTypes.INSERT
+    }
+  );
+
+  res.status(200).json({error: false,message: "send success "});
+  }catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+}
+
+
+const getMessages = async (req, res) => {
+  try{
+    const { receiverId, senderId } = req.body;
+    console.log(receiverId);
+
+    const messages = await sequelize.query(
+      'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?)  ORDER BY createdAt DESC',
+      {
+        replacements: [senderId, receiverId, senderId, receiverId],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+}
+
+const updateRequirementStatus = async (req, res) => {
+  try {
+    const { requirementId, status } = req.body;
+    if (!requirementId || !status) {
+      return res.status(400).json({ message: 'Requirement ID and status are required', error: true });
+    }
+
+    const result = await sequelize.query(
+      'UPDATE add_new_requirement SET Status = ? WHERE id = ?',
+      {
+        replacements: [status, requirementId],
+        type: QueryTypes.UPDATE,
+      }
+    );
+
+    if (result[0] === 0) {
+      return res.status(404).json({ message: 'Requirement not found', error: true });
+    }
+
+    res.status(200).json({ message: 'Requirement status updated successfully', error: false });
+  } catch (error) {
+    console.error('Error updating requirement status:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 
 
+const deleteRequirement = async (req, res) => {
+  try {
+    const { requirementId } = req.body;
+    if (!requirementId) {
+      return res.status(400).json({ message: 'Requirement ID is required', error: true });
+    }
 
+    const result = await sequelize.query(
+      'DELETE FROM add_new_requirement WHERE id = ?',
+      {
+        replacements: [requirementId],
+        type: QueryTypes.DELETE,
+      }
+    );
+
+    if (result[0] === 0) {
+      return res.status(404).json({ message: 'Requirement not found', error: true });
+    }
+
+    res.status(200).json({ message: 'Requirement deleted successfully', error: false });
+  } catch (error) {
+    console.error('Error deleting requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const createProduct = async (req, res) => {
+  try {
+    const { userId,title, description,images, type } = req.body;
+    const result = await sequelize.query(
+      'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+      {
+        replacements: [userId, title, description, type],
+        type: QueryTypes.INSERT
+      }
+    );
+
+    if(result && result[0] != null){
+      const reqId = result[0];
+      if (Array.isArray(images)) {
+
+        for (let index = 0; index < images.length; index++) {
+          const data = images[index];
+          await sequelize.query(
+            'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+            {
+              replacements: [reqId, data],
+              type: QueryTypes.INSERT
+            }
+          );
+        }
+
+        res.status(200).json({ message: 'product created!', error: false });
+      }
+    } else {
+      res.status(400).json({ message: 'Data not inserted', error: true });
+    }
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ message: 'Internal server error',error: true });
+  }
+};
+
+const getAllUserPrductService = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+
+    
+    const requirments = await sequelize.query(
+      'SELECT add_new_productservice.*,productservice_photo.id AS PHID,productservice_photo.photo AS RIMAGE FROM add_new_productservice LEFT JOIN productservice_photo ON add_new_productservice.id = productservice_photo.productservice_id WHERE add_new_productservice.user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const groupedRequirements = requirments.reduce((acc, row) => {
+      const { id, PHID, RIMAGE, ...requirementData } = row;
+      if (!acc[id]) {
+        acc[id] = {
+          ...requirementData,
+          images: [],
+        };
+      }
+      if (PHID) {
+        acc[id].images.push({ id: PHID, url: RIMAGE });
+      }
+      return acc;
+    }, {});
+    const resultArray = Object.values(groupedRequirements);
+
+    res.status(200).json({error: false,message : "Product Fetch",allProducts : resultArray});
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error',error:true });
+  }
+};
 
 module.exports = {
   registerUser,
