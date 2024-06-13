@@ -107,7 +107,7 @@ const registerUser = async (req, res) => {
     const mobileNumberRegex = /^[6-9]\d{9}$/;
     if (!mobileNumberRegex.test(mobileNumber)) {
       console.log("Invalid mobile number");
-      res.status(400).json({ error: true,message: 'Invalid mobile number' });
+      res.status(400).json({ error: true, message: 'Invalid mobile number' });
       return;
     }
 
@@ -132,9 +132,9 @@ const registerUser = async (req, res) => {
 
       // Generate and send OTP
       // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false,message: 'User registered successfully',userId:userId });
+      res.status(200).json({ error: false, message: 'User registered successfully', userId: userId });
     } else {
-      res.status(400).json({ error: true,message: 'Mobile number already registered' });
+      res.status(400).json({ error: true, message: 'Mobile number already registered' });
     }
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -246,7 +246,7 @@ const OTPVerify = async (req, res) => {
 
 const updateUserType = async (req, res) => {
   try {
-    const { type,userId } = req.body;
+    const { type, userId } = req.body;
 
     await sequelize.query(
       'UPDATE register SET type = ? WHERE id = ?',
@@ -256,22 +256,22 @@ const updateUserType = async (req, res) => {
       }
     );
 
-    res.json({ error: false,message: 'User type updated successfully' });
+    res.json({ error: false, message: 'User type updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true,message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
 const createUserProfile = async (req, res) => {
   try {
-    const { userId, email, qualification,occupation,employment,about,profile,cover } = req.body;
+    const { userId, email, qualification, occupation, employment, about, profile, cover } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.log("Invalid email");
-      res.status(400).json({ error: true,message: 'Invalid email' });
+      res.status(400).json({ error: true, message: 'Invalid email' });
       return;
     }
 
@@ -287,30 +287,30 @@ const createUserProfile = async (req, res) => {
       const result = await sequelize.query(
         'INSERT INTO personal_profile (user_id,email,qualification,occupation,employment,about,profile,cover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId, email, qualification,occupation,employment,about,profile,cover],
+          replacements: [userId, email, qualification, occupation, employment, about, profile, cover],
           type: QueryTypes.INSERT
         }
       );
       // Generate and send OTP
       // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false,message: 'Personal Profile create successfully' });
+      res.status(200).json({ error: false, message: 'Personal Profile create successfully' });
     } else {
-      res.status(400).json({ error: true,message: 'Personal Profile is already exist' });
+      res.status(400).json({ error: true, message: 'Personal Profile is already exist' });
     }
   } catch (error) {
-    res.status(500).json({ error: true,message: error });
+    res.status(500).json({ error: true, message: error });
   }
 };
 
 const createBusinessProfile = async (req, res) => {
   try {
-    const { userId,business_name, email, business_type,business_category,description,profile,cover } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.log("Invalid email");
-      res.status(400).json({ error: true,message: 'Invalid email' });
+      res.status(400).json({ error: true, message: 'Invalid email' });
       return;
     }
 
@@ -324,35 +324,35 @@ const createBusinessProfile = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,homeTwon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId,business_name, email, business_type,business_category,description,profile,cover],
+          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon],
           type: QueryTypes.INSERT
         }
       );
       // Generate and send OTP
       // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false,message: 'Business Profile create successfully' });
+      res.status(200).json({ error: false, message: 'Business Profile create successfully' });
     } else {
-      res.status(400).json({ error: true,message: 'Business Profile is already exist' });
+      res.status(400).json({ error: true, message: 'Business Profile is already exist' });
     }
   } catch (error) {
-    res.status(500).json({ error: true,message: error });
+    res.status(500).json({ error: true, message: error });
   }
 };
 
 const createRequirement = async (req, res) => {
   try {
-    const { userId,title, description,images } = req.body;
+    const { userId, title, description, images, value } = req.body;
     const result = await sequelize.query(
-      'INSERT INTO add_new_requirement (user_id,Title,Description) VALUES (?,?,?)',
+      'INSERT INTO add_new_requirement (user_id,Title,Description, value) VALUES (?,?,?,?)',
       {
-        replacements: [userId, title, description],
+        replacements: [userId, title, description, value],
         type: QueryTypes.INSERT
       }
     );
 
-    if(result && result[0] != null){
+    if (result && result[0] != null) {
       const reqId = result[0];
       if (Array.isArray(images)) {
 
@@ -374,7 +374,7 @@ const createRequirement = async (req, res) => {
     }
   } catch (error) {
     console.error('Error creating Requirement:', error);
-    res.status(500).json({ message: 'Internal server error',error: true });
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
@@ -405,11 +405,13 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 
     // Fetch requirements, excluding the current user's requirements
     const requirementsQuery = `
-      SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE
-      FROM add_new_requirement
-      LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
-      WHERE add_new_requirement.user_id IN (:idArray) AND add_new_requirement.user_id != :userId
-    `;
+  SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE
+  FROM add_new_requirement
+  LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
+  WHERE add_new_requirement.user_id IN (:idArray) 
+  AND add_new_requirement.user_id != :userId 
+  AND add_new_requirement.value = 'Now'
+`;
 
     const requirements = await sequelize.query(requirementsQuery, {
       replacements: { idArray, userId },
@@ -447,7 +449,7 @@ const getAllUserRequirements = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
 
-    
+
     const requirments = await sequelize.query(
       'SELECT add_new_requirement.*,requirment_photo.id AS PHID,requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.user_id = ?',
       {
@@ -471,10 +473,10 @@ const getAllUserRequirements = async (req, res) => {
     }, {});
     const resultArray = Object.values(groupedRequirements);
 
-    res.status(200).json({error: false,message : "Requirment Fetch",allRequirment : resultArray});
+    res.status(200).json({ error: false, message: "Requirment Fetch", allRequirment: resultArray });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -485,14 +487,14 @@ const getAllUsers = async (req, res) => {
     const users = await sequelize.query(
       'SELECT r.*,uf.id AS FID,uf.user_id AS REQID,uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ?',
       {
-        replacements: [userId,userId,'2',userId],
+        replacements: [userId, userId, '2', userId],
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({error: false,message : "User Data Fetch",allUsers : users});
+    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -522,10 +524,10 @@ const getFollowAllUsers = async (req, res) => {
       return user;
     });
 
-    res.status(200).json({error: false,message : "User Data Fetch",allUsers : usersWithFollowers});
+    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: usersWithFollowers });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -540,10 +542,10 @@ const getPersonalProfile = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({error: false,message : "User Data Fetch",personalProfile : users});
+    res.status(200).json({ error: false, message: "User Data Fetch", personalProfile: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -558,10 +560,10 @@ const getBusinessProfile = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({error: false,message : "User Data Fetch",businessProfile : users});
+    res.status(200).json({ error: false, message: "User Data Fetch", businessProfile: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -572,7 +574,7 @@ const sendFollowRequest = async (req, res) => {
     const existingUser = await sequelize.query(
       'SELECT * FROM user_follower WHERE user_id = ? AND follower_id = ? AND status != ?',
       {
-        replacements: [userId,followerId,'2'],
+        replacements: [userId, followerId, '2'],
         type: QueryTypes.SELECT
       }
     );
@@ -580,7 +582,7 @@ const sendFollowRequest = async (req, res) => {
     const existingUser1 = await sequelize.query(
       'SELECT * FROM user_follower WHERE user_id = ? AND follower_id = ? AND status != ?',
       {
-        replacements: [followerId,userId,'2'],
+        replacements: [followerId, userId, '2'],
         type: QueryTypes.SELECT
       }
     );
@@ -595,12 +597,12 @@ const sendFollowRequest = async (req, res) => {
       );
       // Generate and send OTP
       // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false,message: 'Request send successfully' });
+      res.status(200).json({ error: false, message: 'Request send successfully' });
     } else {
-      res.status(400).json({ error: true,message: 'Request already exist' });
+      res.status(400).json({ error: true, message: 'Request already exist' });
     }
   } catch (error) {
-    res.status(500).json({ error: true,message: error });
+    res.status(500).json({ error: true, message: error });
   }
 };
 
@@ -615,16 +617,16 @@ const getFollowRequest = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({error: false,message : "Follow Request Fetch",followRequest : users});
+    res.status(200).json({ error: false, message: "Follow Request Fetch", followRequest: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
 const updateRequestStatus = async (req, res) => {
   try {
-    const { reqId,status } = req.body;
+    const { reqId, status } = req.body;
 
     await sequelize.query(
       'UPDATE user_follower SET status = ? WHERE id = ?',
@@ -635,16 +637,16 @@ const updateRequestStatus = async (req, res) => {
     );
 
     var msg = "";
-    if(status == "0"){
+    if (status == "0") {
       msg = "Accept request successfully";
     } else {
       msg = "Reject request successfully";
     }
 
-    res.json({ error: false,message: msg });
+    res.json({ error: false, message: msg });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true,message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
@@ -658,8 +660,8 @@ const loginUser = async (req, res) => {
     const [existingUser] = await sequelize.query('SELECT * FROM register WHERE mobileNumber = ?',
       { replacements: [mobileNumber], type: QueryTypes.SELECT });
 
-      // const [existingUserLoginWith] = await sequelize.query('SELECT type FROM register WHERE mobileNumber = ? ',
-      // { replacements: [mobileNumber], type: QueryTypes.SELECT });
+    // const [existingUserLoginWith] = await sequelize.query('SELECT type FROM register WHERE mobileNumber = ? ',
+    // { replacements: [mobileNumber], type: QueryTypes.SELECT });
 
     if (existingUser) {
 
@@ -670,9 +672,9 @@ const loginUser = async (req, res) => {
       const type = user.type;
       const status = user.status;
 
-      return res.status(200).send({error: false,message: 'Login success!', token: token, userId: userId,type: type,status: status});
+      return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId, type: type, status: status });
     } else {
-      return res.status(404).send({error : true,message: 'Mobile Number not found! Sign up!' });
+      return res.status(404).send({ error: true, message: 'Mobile Number not found! Sign up!' });
     }
   } catch (error) {
     console.log(error);
@@ -918,10 +920,10 @@ const getAllUsersIfFollow = async (req, res) => {
         type: sequelize.QueryTypes.SELECT
       }
     );
-    res.status(200).json({error: false,message:"User Fetch",chatUser: users});
+    res.status(200).json({ error: false, message: "User Fetch", chatUser: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
@@ -957,10 +959,10 @@ const createRoom = async (req, res) => {
         }
       );
     }
-    res.status(200).json({ error: false,message: 'Room Created Successfully' });
+    res.status(200).json({ error: false, message: 'Room Created Successfully' });
   } catch (error) {
     console.error('Error creating room:', error);
-    res.status(500).json({ error: true,message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
@@ -988,7 +990,7 @@ const findRoomByUserId = async (req, res) => {
     );
 
     if (roomsQuery.length === 0) {
-      return res.status(404).json({ error:true,message: 'No rooms found for this user' });
+      return res.status(404).json({ error: true, message: 'No rooms found for this user' });
     }
 
     // Fetch participants for each room
@@ -1016,7 +1018,7 @@ const findRoomByUserId = async (req, res) => {
       };
     }));
 
-    res.status(200).json({error: false,message: "Room Fetch", roomDetails: roomDetails});
+    res.status(200).json({ error: false, message: "Room Fetch", roomDetails: roomDetails });
   } catch (error) {
     console.error('Error fetching rooms:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1027,27 +1029,27 @@ const findRoomByUserId = async (req, res) => {
 
 
 const sendMessage = async (req, res) => {
-  try{
+  try {
     const { content, senderId, receiverId } = req.body;
-  console.log(req.body);
+    console.log(req.body);
 
-  await sequelize.query(
-    'INSERT INTO message (senderId, reciverId, content) VALUES (?, ?, ?)',
-    {
-      replacements: [senderId, receiverId, content],
-      type: sequelize.QueryTypes.INSERT
-    }
-  );
+    await sequelize.query(
+      'INSERT INTO message (senderId, reciverId, content) VALUES (?, ?, ?)',
+      {
+        replacements: [senderId, receiverId, content],
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
 
-  res.status(200).json({error: false,message: "send success "});
-  }catch (error) {
+    res.status(200).json({ error: false, message: "send success " });
+  } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 }
 
 const getMessages = async (req, res) => {
-  try{
+  try {
     const { receiverId, senderId } = req.body;
     console.log(receiverId);
 
@@ -1059,7 +1061,7 @@ const getMessages = async (req, res) => {
       }
     );
 
-    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+    res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
   } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
@@ -1072,7 +1074,7 @@ const getAllUserPrductService = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
 
-    
+
     const requirments = await sequelize.query(
       'SELECT add_new_productservice.*,productservice_photo.id AS PHID,productservice_photo.photo AS RIMAGE FROM add_new_productservice LEFT JOIN productservice_photo ON add_new_productservice.id = productservice_photo.productservice_id WHERE add_new_productservice.user_id = ?',
       {
@@ -1096,16 +1098,16 @@ const getAllUserPrductService = async (req, res) => {
     }, {});
     const resultArray = Object.values(groupedRequirements);
 
-    res.status(200).json({error: false,message : "Product Fetch",allProducts : resultArray});
+    res.status(200).json({ error: false, message: "Product Fetch", allProducts: resultArray });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
 const createProduct = async (req, res) => {
   try {
-    const { userId,title, description,images, type } = req.body;
+    const { userId, title, description, images, type } = req.body;
     const result = await sequelize.query(
       'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
       {
@@ -1114,7 +1116,7 @@ const createProduct = async (req, res) => {
       }
     );
 
-    if(result && result[0] != null){
+    if (result && result[0] != null) {
       const reqId = result[0];
       if (Array.isArray(images)) {
 
@@ -1136,7 +1138,7 @@ const createProduct = async (req, res) => {
     }
   } catch (error) {
     console.error('Error creating product:', error);
-    res.status(500).json({ message: 'Internal server error',error: true });
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
