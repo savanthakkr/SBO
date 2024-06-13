@@ -4,7 +4,8 @@ const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
 const { getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
-    getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers } = userController; 
+    getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
+    createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
 
 // Register a new user
 router.post('/users/register', registerUser);
@@ -38,6 +39,11 @@ router.post('/users/sendFollowRequest', sendFollowRequest);
 router.post('/users/getFollowRequest', getFollowRequest);
 router.post('/users/updateRequestStatus', updateRequestStatus);
 router.post('/users/getFollowAllUsers', getFollowAllUsers);
+router.post('/users/createProduct', createProduct);
+router.post('/users/getAllUserPrductService', getAllUserPrductService);
+router.post('/users/deleteRequirement', deleteRequirement);
+router.post('/users/updateBusinessProfile', updateBusinessProfile);
+router.post('/users/updateRequirementStatus', updateRequirementStatus);
 
 // chat routs SBO
 
