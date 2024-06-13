@@ -265,7 +265,7 @@ const updateUserType = async (req, res) => {
 
 const createUserProfile = async (req, res) => {
   try {
-    const { userId, email, qualification,occupation,employment,about } = req.body;
+    const { userId, email, qualification,occupation,employment,about,profile,cover } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -285,9 +285,9 @@ const createUserProfile = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO personal_profile (user_id,email,qualification,occupation,employment,about) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO personal_profile (user_id,email,qualification,occupation,employment,about,profile,cover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId, email, qualification,occupation,employment,about],
+          replacements: [userId, email, qualification,occupation,employment,about,profile,cover],
           type: QueryTypes.INSERT
         }
       );
@@ -302,51 +302,9 @@ const createUserProfile = async (req, res) => {
   }
 };
 
-
-const updateUserProfile = async (req, res) => {
-  try {
-    const { userId, email, qualification, occupation, employment, about } = req.body;
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.log("Invalid email");
-      res.status(400).json({ error: true, message: 'Invalid email' });
-      return;
-    }
-
-    const existingUser = await sequelize.query(
-      'SELECT * FROM personal_profile WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (existingUser.length > 0) {
-      await sequelize.query(
-        `UPDATE personal_profile 
-         SET email = ?, qualification = ?, occupation = ?, employment = ?, about = ? 
-         WHERE user_id = ?`,
-        {
-          replacements: [email, qualification, occupation, employment, about, userId],
-          type: QueryTypes.UPDATE
-        }
-      );
-      res.status(200).json({ error: false, message: 'Personal Profile updated successfully' });
-    } else {
-      res.status(404).json({ error: true, message: 'Personal Profile not found' });
-    }
-  } catch (error) {
-    console.error('Error updating Personal Profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
-  }
-};
-
-
 const createBusinessProfile = async (req, res) => {
   try {
-    const { userId,business_name, email, business_type,business_category,description } = req.body;
+    const { userId,business_name, email, business_type,business_category,description,profile,cover } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -366,9 +324,9 @@ const createBusinessProfile = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId,business_name, email, business_type,business_category,description],
+          replacements: [userId,business_name, email, business_type,business_category,description,profile,cover],
           type: QueryTypes.INSERT
         }
       );
@@ -380,46 +338,6 @@ const createBusinessProfile = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: true,message: error });
-  }
-};
-
-const updateBusinessProfile = async (req, res) => {
-  try {
-    const { userId, business_name, email, business_type, business_category, description } = req.body;
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.log("Invalid email");
-      res.status(400).json({ error: true, message: 'Invalid email' });
-      return;
-    }
-
-    const existingUser = await sequelize.query(
-      'SELECT * FROM business_profile WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (existingUser.length > 0) {
-      await sequelize.query(
-        `UPDATE business_profile 
-         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ? 
-         WHERE user_id = ?`,
-        {
-          replacements: [business_name, email, business_type, business_category, description, userId],
-          type: QueryTypes.UPDATE
-        }
-      );
-      res.status(200).json({ error: false, message: 'Business Profile updated successfully' });
-    } else {
-      res.status(404).json({ error: true, message: 'Business Profile not found' });
-    }
-  } catch (error) {
-    console.error('Error updating Business Profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
@@ -459,6 +377,7 @@ const createRequirement = async (req, res) => {
     res.status(500).json({ message: 'Internal server error',error: true });
   }
 };
+
 
 const getAllUserRequirementsUserFollo = async (req, res) => {
   try {
@@ -520,6 +439,8 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+
 
 const getAllUserRequirements = async (req, res) => {
   try {
@@ -780,26 +701,26 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// const updateUserProfile = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     console.log(userId);
-//     const { email, password, name } = req.body;
+const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(userId);
+    const { email, password, name } = req.body;
 
-//     await sequelize.query(
-//       'UPDATE users SET email = ?, password = ?, name = ? WHERE id = ?',
-//       {
-//         replacements: [email, password, name, userId],
-//         type: sequelize.QueryTypes.UPDATE
-//       }
-//     );
+    await sequelize.query(
+      'UPDATE users SET email = ?, password = ?, name = ? WHERE id = ?',
+      {
+        replacements: [email, password, name, userId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
 
-//     res.json({ message: 'User profile updated successfully' });
-//   } catch (error) {
-//     console.error('Error updating user profile:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// };
+    res.json({ message: 'User profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 
 const getImage = async (req, res) => {
@@ -1125,7 +1046,6 @@ const sendMessage = async (req, res) => {
   }
 }
 
-
 const getMessages = async (req, res) => {
   try{
     const { receiverId, senderId } = req.body;
@@ -1146,133 +1066,13 @@ const getMessages = async (req, res) => {
   }
 }
 
-const updateRequirementStatus = async (req, res) => {
-  try {
-    const { requirementId, status } = req.body;
-    if (!requirementId || !status) {
-      return res.status(400).json({ message: 'Requirement ID and status are required', error: true });
-    }
-
-    const result = await sequelize.query(
-      'UPDATE add_new_requirement SET Status = ? WHERE id = ?',
-      {
-        replacements: [status, requirementId],
-        type: QueryTypes.UPDATE,
-      }
-    );
-
-    if (result[0] === 0) {
-      return res.status(404).json({ message: 'Requirement not found', error: true });
-    }
-
-    res.status(200).json({ message: 'Requirement status updated successfully', error: false });
-  } catch (error) {
-    console.error('Error updating requirement status:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
 
 
 
-const deleteRequirement = async (req, res) => {
-  try {
-    const { requirementId } = req.body;
-    if (!requirementId) {
-      return res.status(400).json({ message: 'Requirement ID is required', error: true });
-    }
-
-    const result = await sequelize.query(
-      'DELETE FROM add_new_requirement WHERE id = ?',
-      {
-        replacements: [requirementId],
-        type: QueryTypes.DELETE,
-      }
-    );
-
-    if (result[0] === 0) {
-      return res.status(404).json({ message: 'Requirement not found', error: true });
-    }
-
-    res.status(200).json({ message: 'Requirement deleted successfully', error: false });
-  } catch (error) {
-    console.error('Error deleting requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
 
 
-const createProduct = async (req, res) => {
-  try {
-    const { userId,title, description,images, type } = req.body;
-    const result = await sequelize.query(
-      'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
-      {
-        replacements: [userId, title, description, type],
-        type: QueryTypes.INSERT
-      }
-    );
 
-    if(result && result[0] != null){
-      const reqId = result[0];
-      if (Array.isArray(images)) {
 
-        for (let index = 0; index < images.length; index++) {
-          const data = images[index];
-          await sequelize.query(
-            'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
-            {
-              replacements: [reqId, data],
-              type: QueryTypes.INSERT
-            }
-          );
-        }
-
-        res.status(200).json({ message: 'product created!', error: false });
-      }
-    } else {
-      res.status(400).json({ message: 'Data not inserted', error: true });
-    }
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ message: 'Internal server error',error: true });
-  }
-};
-
-const getAllUserPrductService = async (req, res) => {
-  try {
-    // const userId = req.user.id;
-    const { userId } = req.body;
-
-    
-    const requirments = await sequelize.query(
-      'SELECT add_new_productservice.*,productservice_photo.id AS PHID,productservice_photo.photo AS RIMAGE FROM add_new_productservice LEFT JOIN productservice_photo ON add_new_productservice.id = productservice_photo.productservice_id WHERE add_new_productservice.user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    const groupedRequirements = requirments.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, ...requirementData } = row;
-      if (!acc[id]) {
-        acc[id] = {
-          ...requirementData,
-          images: [],
-        };
-      }
-      if (PHID) {
-        acc[id].images.push({ id: PHID, url: RIMAGE });
-      }
-      return acc;
-    }, {});
-    const resultArray = Object.values(groupedRequirements);
-
-    res.status(200).json({error: false,message : "Product Fetch",allProducts : resultArray});
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error',error:true });
-  }
-};
 
 module.exports = {
   registerUser,
@@ -1281,9 +1081,7 @@ module.exports = {
   sendMessage,
   getMessages,
   getMessagesRoom,
-  updateRequirementStatus,
   updateUserProfile,
-  updateBusinessProfile,
   loginUser,
   getAllUsersIfFollow,
   updateUserType,
@@ -1298,8 +1096,6 @@ module.exports = {
   OTPVerifyEmail,
   updatepassword,
   createRequirement,
-  deleteRequirement,
-  createProduct,
   getAllUsers,
   getAllUserRequirements,
   getPersonalProfile,
@@ -1307,7 +1103,6 @@ module.exports = {
   sendFollowRequest,
   getFollowRequest,
   updateRequestStatus,
-  getAllUserPrductService,
   getFollowAllUsers,
   getAllUserRequirementsUserFollo
 };
