@@ -446,12 +446,10 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 
 const getAllUserRequirements = async (req, res) => {
   try {
-    // const userId = req.user.id;
     const { userId } = req.body;
 
-
     const requirments = await sequelize.query(
-      'SELECT add_new_requirement.*,requirment_photo.id AS PHID,requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.user_id = ?',
+      'SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.user_id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -462,6 +460,7 @@ const getAllUserRequirements = async (req, res) => {
       const { id, PHID, RIMAGE, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
+          id, // Include the requirement ID here
           ...requirementData,
           images: [],
         };
@@ -471,6 +470,7 @@ const getAllUserRequirements = async (req, res) => {
       }
       return acc;
     }, {});
+
     const resultArray = Object.values(groupedRequirements);
 
     res.status(200).json({ error: false, message: "Requirment Fetch", allRequirment: resultArray });
@@ -1028,28 +1028,31 @@ const findRoomByUserId = async (req, res) => {
 
 
 
+
 const sendMessage = async (req, res) => {
-  try {
-    const { content, senderId, receiverId } = req.body;
-    console.log(req.body);
+  try{
+    const { content, senderId, receiverId,type } = req.body;
+  console.log(req.body);
 
-    await sequelize.query(
-      'INSERT INTO message (senderId, reciverId, content) VALUES (?, ?, ?)',
-      {
-        replacements: [senderId, receiverId, content],
-        type: sequelize.QueryTypes.INSERT
-      }
-    );
+  // await sequelize.query("SET SESSION max_allowed_packet=67108864");
 
-    res.status(200).json({ error: false, message: "send success " });
-  } catch (error) {
+  await sequelize.query(
+    'INSERT INTO message (senderId, reciverId, content,type) VALUES (?, ?, ?, ?)',
+    {
+      replacements: [senderId, receiverId, content,type],
+      type: sequelize.QueryTypes.INSERT,
+    }
+  );
+
+  res.status(200).json({error: false,message: "send success "});
+  }catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 }
 
 const getMessages = async (req, res) => {
-  try {
+  try{
     const { receiverId, senderId } = req.body;
     console.log(receiverId);
 
@@ -1061,12 +1064,13 @@ const getMessages = async (req, res) => {
       }
     );
 
-    res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
+    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
   } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 }
+
 
 
 const getAllUserPrductService = async (req, res) => {
@@ -1170,15 +1174,15 @@ const deleteRequirement = async (req, res) => {
 
 const updateRequirementStatus = async (req, res) => {
   try {
-    const { requirementId, status } = req.body;
-    if (!requirementId || !status) {
+    const { requirementId } = req.body;
+    if (!requirementId ) {
       return res.status(400).json({ message: 'Requirement ID and status are required', error: true });
     }
 
     const result = await sequelize.query(
       'UPDATE add_new_requirement SET Status = ? WHERE id = ?',
       {
-        replacements: [status, requirementId],
+        replacements: [1, requirementId],
         type: QueryTypes.UPDATE,
       }
     );
@@ -1196,16 +1200,9 @@ const updateRequirementStatus = async (req, res) => {
 
 const updateBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon  } = req.body;
 
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.log("Invalid email");
-      res.status(400).json({ error: true, message: 'Invalid email' });
-      return;
-    }
-
+console.log(req.body);
     const existingUser = await sequelize.query(
       'SELECT * FROM business_profile WHERE user_id = ?',
       {
@@ -1217,10 +1214,10 @@ const updateBusinessProfile = async (req, res) => {
     if (existingUser.length > 0) {
       await sequelize.query(
         `UPDATE business_profile 
-         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ? 
+         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,homeTwon = ?
          WHERE user_id = ?`,
         {
-          replacements: [business_name, email, business_type, business_category, description, userId],
+          replacements: [business_name, email, business_type, business_category, description, profile, cover, address, homeTwon, userId ],
           type: QueryTypes.UPDATE
         }
       );
