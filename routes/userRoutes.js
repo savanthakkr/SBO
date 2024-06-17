@@ -16,7 +16,7 @@ router.post('/users/sendMessage', sendMessage);
 router.post('/users/getMessages', getMessages);
 
 
-router.post('/sendMessageRoom/:id',verifyToken, sendMessageRoom);
+router.post('/users/sendMessageRoom', sendMessageRoom);
 
 router.post('/users/otpEmail', OTPVerifyEmail);
 
@@ -56,7 +56,7 @@ router.get('/users/profile',verifyToken, getUserProfile);
 
 router.get('/getMessagesSenderRoom/:id',verifyToken, getMessagesSenderRoom);
 
-router.get('/getMessagesRoom/:id',verifyToken, getMessagesRoom);
+router.post('/users/getMessagesRoom', getMessagesRoom);
 
 router.get('/findRoomByUserId/:id',verifyToken, findRoomByUserId);
 

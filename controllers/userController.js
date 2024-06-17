@@ -830,41 +830,45 @@ const updatepassword = async (req, res) => {
 //     res.status(500).json({ error: 'Internal server error' });
 //   }
 // };
-
-
-
 const sendMessageRoom = async (req, res) => {
-  const { content } = req.body;
-  const receiverId = req.params.id;
-  console.log(receiverId);
-  const senderId = req.user.id;
+  try{
+    const { content, senderId, roomId,type } = req.body;
+  console.log(req.body);
 
   await sequelize.query(
-    'INSERT INTO group_chat (user_id, room_id, created_at, content) VALUES (?, ?, NOW(), ?)',
+    'INSERT INTO message_room (senderId,roomId, content,type) VALUES (?, ?, ?, ?)',
     {
-      replacements: [senderId, receiverId, content],
+      replacements: [senderId, roomId, content, type],
       type: sequelize.QueryTypes.INSERT
     }
   );
 
-  res.json({ message: 'Message sent successfully' });
+  res.status(200).json({error: false,message: "send success "});
+  }catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
 }
 
-const getMessagesRoom = async (req, res) => {
-  const receiverId = req.user.id;
-  console.log(receiverId);
-  const senderId = req.params.id;
 
-  const messages = await sequelize.query(
-    'SELECT * FROM group_chat WHERE room_id = ? ORDER BY created_at ASC',
-    {
-      replacements: [senderId, receiverId, receiverId, senderId],
-      type: sequelize.QueryTypes.SELECT
-    }
-  );
+// const sendMessageRoom = async (req, res) => {
+//   const { content, senderId, receiverId,type } = req.body;
+//   const receiverId = req.params.id;
+//   console.log(receiverId);
+//   const senderId = req.user.id;
 
-  res.json(messages);
-}
+//   await sequelize.query(
+//     'INSERT INTO group_chat (user_id, room_id, created_at, content) VALUES (?, ?, NOW(), ?)',
+//     {
+//       replacements: [senderId, receiverId, content],
+//       type: sequelize.QueryTypes.INSERT
+//     }
+//   );
+
+//   res.json({ message: 'Message sent successfully' });
+// }
+
+
 
 const getMessagesSenderRoom = async (req, res) => {
   const receiverId = req.params.id;
@@ -948,9 +952,10 @@ const createRoom = async (req, res) => {
     );
 
     const roomId = result[0]; // Assuming the ID of the created room is returned
+    const participants = [...selectedUsers, userId];
 
     // Insert participants into chat_room_participants table
-    for (const participant of selectedUsers) {
+    for (const participant of participants) {
       await sequelize.query(
         'INSERT INTO room_participants (room_id, user_id) VALUES (?, ?)',
         {
@@ -1071,7 +1076,24 @@ const getMessages = async (req, res) => {
   }
 }
 
+const getMessagesRoom = async (req, res) => {
+  try{
+    const { roomId } = req.body;
 
+  const messages = await sequelize.query(
+    'SELECT * FROM message_room WHERE roomId = ? ORDER BY createdAt ASC',
+    {
+      replacements: [roomId],
+      type: sequelize.QueryTypes.SELECT
+    }
+  );
+
+  res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+  }catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+}
 
 const getAllUserPrductService = async (req, res) => {
   try {
