@@ -3,19 +3,34 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const { getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
+const {getSavedRequirements, markMessagesAsSeen, updateUserToken,
+    getUserToken,
+    getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
 
+// admin api 
+
+router.post('/users/loginUserAdmin', loginUserAdmin);
+
+router.post('/users/fetchUsersForAdmin', fetchUsersForAdmin);
+router.post('/users/fetchUserRequirements', fetchUserRequirements);
+router.post('/users/fetchRequirementDetails', fetchRequirementDetails);
+
 // Register a new user
 router.post('/users/register', registerUser);
-
+router.post('/users/getSavedRequirements', getSavedRequirements);
 router.post('/users/passwordOTP', sendPasswordOTP);
+router.post('/users/updateToken', updateUserToken);
+router.post('/users/markMessagesAsSeen', markMessagesAsSeen);
+router.post('/users/getToken', getUserToken);
+router.post('/users/getRoomToken', getRoomUserToken);
 
 router.post('/users/sendMessage', sendMessage);
 router.post('/users/getMessages', getMessages);
-
-
+router.post('/users/saveRequirement', saveRequirement);
+router.post('/users/clickSellIt', clickSellIt);
+router.post('/users/getClickSellIt', getClickSellIt);
 router.post('/users/sendMessageRoom', sendMessageRoom);
 
 router.post('/users/otpEmail', OTPVerifyEmail);

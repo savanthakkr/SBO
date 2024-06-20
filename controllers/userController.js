@@ -405,13 +405,20 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 
     // Fetch requirements, excluding the current user's requirements
     const requirementsQuery = `
-  SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE
-  FROM add_new_requirement
-  LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
-  WHERE add_new_requirement.user_id IN (:idArray) 
-  AND add_new_requirement.user_id != :userId 
-  AND add_new_requirement.value = 'Now'
-`;
+      SELECT add_new_requirement.*, 
+             requirment_photo.id AS PHID, 
+             requirment_photo.photo AS RIMAGE,
+             register.name AS userName,
+             register.type AS userType,
+             saved_requirements.requirement_id AS savedRequirementId
+      FROM add_new_requirement
+      LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
+      JOIN register ON add_new_requirement.user_id = register.id
+      LEFT JOIN saved_requirements ON add_new_requirement.id = saved_requirements.requirement_id AND saved_requirements.user_id = :userId
+      WHERE add_new_requirement.user_id IN (:idArray) 
+      AND add_new_requirement.user_id != :userId 
+      AND add_new_requirement.value = 'Now'
+    `;
 
     const requirements = await sequelize.query(requirementsQuery, {
       replacements: { idArray, userId },
@@ -419,11 +426,14 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     });
 
     const groupedRequirements = requirements.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, ...requirementData } = row;
+      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
           id,  // Include the id explicitly
           ...requirementData,
+          userName,
+          userType,
+          isSaved: !!savedRequirementId,
           images: [],
         };
       }
@@ -442,6 +452,108 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
   }
 };
 
+
+
+const saveRequirement = async (req, res) => {
+  try {
+    const { userId, requirementId, requirementUserId } = req.body;
+
+    // Check if the requirement is already saved by the user
+    const existingSave = await sequelize.query(
+      'SELECT * FROM saved_requirements WHERE user_id = ? AND requirement_id = ?',
+      {
+        replacements: [userId, requirementId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (existingSave.length > 0) {
+      // If the requirement is already saved, delete it
+      const deleteResult = await sequelize.query(
+        'DELETE FROM saved_requirements WHERE user_id = ? AND requirement_id = ?',
+        {
+          replacements: [userId, requirementId],
+          type: QueryTypes.DELETE
+        }
+      );
+
+
+      console.log("hello");
+
+
+      // Check if rows were actually affected
+      return res.status(200).json({ message: 'Requirement unsaved successfully', error: false });
+    } else {
+      // If the requirement is not saved, insert it
+      const result = await sequelize.query(
+        'INSERT INTO saved_requirements (user_id, requirement_id, requirementUserId) VALUES (?, ?, ?)',
+        {
+          replacements: [userId, requirementId, requirementUserId],
+          type: QueryTypes.INSERT
+        }
+      );
+
+      console.log("hello saved");
+
+      if (result && result[0] !== undefined) {
+        return res.status(200).json({ message: 'Requirement saved successfully', error: false });
+      } else {
+        return res.status(400).json({ message: 'Failed to save requirement', error: true });
+      }
+    }
+  } catch (error) {
+    console.error('Error saving requirement:', error);
+    return res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const getSavedRequirements = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const requirementsQuery = `
+      SELECT 
+        add_new_requirement.*, 
+        requirment_photo.id AS PHID, 
+        requirment_photo.photo AS RIMAGE 
+      FROM 
+        saved_requirements
+      JOIN 
+        add_new_requirement ON saved_requirements.requirement_id = add_new_requirement.id
+      LEFT JOIN 
+        requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
+      WHERE 
+        saved_requirements.user_id = ?
+    `;
+
+    const requirements = await sequelize.query(requirementsQuery, {
+      replacements: [userId],
+      type: QueryTypes.SELECT
+    });
+
+    const groupedRequirements = requirements.reduce((acc, row) => {
+      const { id, PHID, RIMAGE, ...requirementData } = row;
+      if (!acc[id]) {
+        acc[id] = {
+          id, // Include the requirement ID here
+          ...requirementData,
+          images: [],
+        };
+      }
+      if (PHID) {
+        acc[id].images.push({ id: PHID, url: RIMAGE });
+      }
+      return acc;
+    }, {});
+
+    const resultArray = Object.values(groupedRequirements);
+
+    res.status(200).json({ error: false, message: "Requirements fetched successfully", allRequirment: resultArray });
+  } catch (error) {
+    console.error('Error fetching saved requirements:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 
 const getAllUserRequirements = async (req, res) => {
@@ -914,22 +1026,59 @@ const getMessagesSenderRoom = async (req, res) => {
 const getAllUsersIfFollow = async (req, res) => {
   try {
     const { userId } = req.body;
+
+    // Fetch users who follow the given user or are followed by the given user
     const users = await sequelize.query(
       `SELECT * FROM register
       WHERE id != :userId
-      AND (id IN (SELECT 	user_id FROM user_follower WHERE follower_id  = :userId AND status = '0')
-           OR id IN (SELECT 	follower_id  FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+      AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
+           OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
       {
         replacements: { userId },
         type: sequelize.QueryTypes.SELECT
       }
     );
-    res.status(200).json({ error: false, message: "User Fetch", chatUser: users });
+
+    // Initialize unseen messages count for each user
+    for (let i = 0; i < users.length; i++) {
+      const unseenMessagesCount = await sequelize.query(
+        'SELECT COUNT(*) as count FROM message WHERE seen = false AND (senderId = ? AND reciverId = ?)',
+        {
+          replacements: [ users[i].id, userId],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+      // Add unseen message count to each user object
+      users[i].unseenMessagesCount = unseenMessagesCount[0].count;
+    }
+
+    res.status(200).json({ error: false, message: "Users fetched successfully", chatUsers: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
+
+
+const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { senderId, receiverId } = req.body;
+
+    await sequelize.query(
+      'UPDATE message SET seen = true, seen_at = NOW() WHERE senderId = ? AND reciverId = ?',
+      {
+        replacements: [receiverId, senderId],
+        type: sequelize.QueryTypes.UPDATE,
+      }
+    );
+
+    res.status(200).json({ error: false, message: "Messages marked as seen" });
+  } catch (error) {
+    console.error('Error updating message status:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 
 
 
@@ -1057,24 +1206,77 @@ const sendMessage = async (req, res) => {
 }
 
 const getMessages = async (req, res) => {
-  try{
+  try {
     const { receiverId, senderId } = req.body;
     console.log(receiverId);
 
+    // Fetch messages between sender and receiver
     const messages = await sequelize.query(
-      'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?)  ORDER BY createdAt DESC',
+      'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?) ORDER BY createdAt DESC',
       {
-        replacements: [senderId, receiverId, senderId, receiverId],
+        replacements: [senderId, receiverId, receiverId, senderId],
         type: sequelize.QueryTypes.SELECT
       }
     );
 
-    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+    // Process messages to include requirement details if needed
+    for (let i = 0; i < messages.length; i++) {
+      console.log(messages[i].type);
+      if (messages[i].type === "requirement") {
+        const requirementId = messages[i].content;
+        console.log(requirementId);
+
+        const requirementsQuery = `
+          SELECT add_new_requirement.*, 
+                 requirment_photo.id AS PHID, 
+                 requirment_photo.photo AS RIMAGE
+          FROM add_new_requirement
+          LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
+          WHERE add_new_requirement.id = ?
+        `;
+
+        const requirements = await sequelize.query(requirementsQuery, {
+          replacements: [requirementId],
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        const groupedRequirements = requirements.reduce((acc, row) => {
+          const { id, PHID, RIMAGE, ...requirementData } = row;
+          if (!acc[id]) {
+            acc[id] = {
+              id,
+              ...requirementData,
+              images: [],
+            };
+          }
+          if (PHID) {
+            acc[id].images.push({ id: PHID, url: RIMAGE });
+          }
+          return acc;
+        }, {});
+
+        // Attach the requirement details to the message
+        messages[i].requirement = Object.values(groupedRequirements)[0] || null;
+      }
+    }
+
+    // Get the total number of unseen messages
+    
+
+    res.status(200).json({ 
+      error: false, 
+      message: "Messages fetched successfully", 
+      messages: messages, 
+    });
   } catch (error) {
-    console.error('Error fetching message:', error);
+    console.error('Error fetching messages:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
-}
+};
+
+
+
+
 
 const getMessagesRoom = async (req, res) => {
   try{
@@ -1254,6 +1456,312 @@ console.log(req.body);
 };
 
 
+const clickSellIt = async (req, res) => {
+  try {
+    const { user_id, requirement_user_id, requirement_id } = req.body;
+    console.log(req.body);
+
+    // Check if the requirement_id already exists
+    const [existingEntry] = await sequelize.query(
+      'SELECT * FROM sell_it_data WHERE requirement_id = ?',
+      {
+        replacements: [requirement_id],
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (existingEntry) {
+      // If the entry already exists, return a response indicating a duplicate entry
+      return res.status(400).json({ error: true, message: "Requirement already exists" });
+    }
+
+    // If the entry does not exist, insert the new entry
+    await sequelize.query(
+      'INSERT INTO sell_it_data (user_id, requirement_user_id, requirement_id) VALUES (?, ?, ?)',
+      {
+        replacements: [user_id, requirement_user_id, requirement_id],
+        type: sequelize.QueryTypes.INSERT,
+      }
+    );
+
+    res.status(200).json({ error: false, message: "Send success" });
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const getClickSellIt = async (req, res) => {
+  try{
+    const {  	user_id, requirement_user_id } = req.body;
+
+    const messages = await sequelize.query(
+      'SELECT * FROM sell_it_data WHERE requirement_user_id = ?  AND user_id = ?',
+      {
+        replacements: [requirement_user_id ,user_id],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+}
+
+const updateUserToken = async (req, res) => {
+  try {
+    const { token, userId } = req.body;
+
+    await sequelize.query(
+      'UPDATE register SET token = ? WHERE id = ?',
+      {
+        replacements: [token, userId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ error: false, message: 'User token updated successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
+
+const getUserToken = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+    const users = await sequelize.query(
+      'SELECT token FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Token Fetch", UserToken: users });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
+const getRoomUserToken = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { roomId } = req.body;
+
+    const roomsQuery = await sequelize.query(
+      'SELECT user_id FROM room_participants WHERE room_id = ?',
+      {
+        replacements: [roomId],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (roomsQuery.length === 0) {
+      return res.status(404).json({ error: true, message: 'No rooms found for this user' });
+    }
+
+    const roomDetails = await Promise.all(roomsQuery.map(async (room) => {
+      const participantsQuery = await sequelize.query(
+        'SELECT token FROM register WHERE id = ?',
+        {
+          replacements: [room.user_id],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+
+      return {
+        allUserToken: participantsQuery
+      };
+    }));
+
+    res.status(200).json({ error: false, message: "User Token Fetch", roomUserToken: roomDetails });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
+
+
+
+
+
+
+// admin api all 
+const loginUserAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const [existingUser] = await sequelize.query('SELECT * FROM admin_login WHERE email = ? AND password = ?',
+      { replacements: [email, password], type: QueryTypes.SELECT });
+
+    // const [existingUserLoginWith] = await sequelize.query('SELECT type FROM register WHERE mobileNumber = ? ',
+    // { replacements: [mobileNumber], type: QueryTypes.SELECT });
+
+    if (existingUser) {
+
+      const user = existingUser;
+
+      const token = generateToken(user);
+      const userId = user.id;
+      const type = user.type;
+      const status = user.status;
+
+      return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId, type: type, status: status });
+    } else {
+      return res.status(404).send({ error: true, message: 'Mobile Number not found! Sign up!' });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      message: 'Error in login check api!',
+      error
+    });
+  }
+};
+
+
+
+
+const fetchUsersForAdmin = async (req, res) => {
+  try {
+    // Fetch all users
+    const users = await sequelize.query(
+      'SELECT id, name, batchYear, mobileNumber, type FROM register',
+      { type: QueryTypes.SELECT }
+    );
+
+    // Initialize an array to hold the user details with profiles
+    const userDetails = [];
+
+    for (const user of users) {
+      let profileData;
+
+      // Fetch profile data based on user type
+      if (user.type === 'Business') {
+        profileData = await sequelize.query(
+          'SELECT * FROM business_profile WHERE user_id = ?',
+          {
+            replacements: [user.id],
+            type: QueryTypes.SELECT
+          }
+        );
+      } else if (user.type === 'Personal') {
+        profileData = await sequelize.query(
+          'SELECT * FROM personal_profile WHERE user_id = ?',
+          {
+            replacements: [user.id],
+            type: QueryTypes.SELECT
+          }
+        );
+      }
+
+      // Add user and profile data to the userDetails array
+      userDetails.push({
+        ...user,
+        profile: profileData[0] || null // Assuming profileData is an array
+      });
+    }
+
+    // Send response with user details
+    res.status(200).json({ error: false, users: userDetails });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+const fetchUserRequirements = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    // Fetch all requirements for the user
+    const requirements = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (requirements.length === 0) {
+      return res.status(404).json({ message: 'No requirements found for the user', error: true });
+    }
+
+    // Fetch associated images for each requirement
+    for (const requirement of requirements) {
+      const images = await sequelize.query(
+        'SELECT photo FROM requirment_photo WHERE requirment_id = ?',
+        {
+          replacements: [requirement.id],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      requirement.images = images.map(img => img.photo);
+    }
+
+    res.status(200).json({ requirements, error: false });
+  } catch (error) {
+    console.error('Error fetching user requirements:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const fetchRequirementDetails = async (req, res) => {
+  try {
+    const { requirementId } = req.body;
+
+    // Validate the requirement ID
+    const requirement = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE id = ?',
+      {
+        replacements: [requirementId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (requirement.length === 0) {
+      return res.status(404).json({ message: 'Requirement ID not found', error: true });
+    }
+
+    // Fetch data from sell_it_data table and the associated user name from the register table
+    const sellDataWithUser = await sequelize.query(
+      `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
+       FROM sell_it_data sid
+       JOIN register r ON sid.user_id = r.id
+       WHERE sid.requirement_id = ?`,
+      {
+        replacements: [requirementId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (sellDataWithUser.length === 0) {
+      return res.status(404).json({ message: 'No data found in sell_it_data for the given requirement ID', error: true });
+    }
+
+    res.status(200).json({ requirement: requirement[0], sellData: sellDataWithUser, error: false });
+  } catch (error) {
+    console.error('Error fetching requirement details:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+
+
+
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -1289,5 +1797,17 @@ module.exports = {
   getAllUserPrductService,
   deleteRequirement,
   updateBusinessProfile,
-  updateRequirementStatus
+  saveRequirement,
+  updateRequirementStatus,
+  clickSellIt,
+  getClickSellIt,
+  loginUserAdmin,
+  fetchUsersForAdmin,
+  fetchUserRequirements,
+  fetchRequirementDetails,
+  updateUserToken,
+  getUserToken,
+  getRoomUserToken,
+  markMessagesAsSeen,
+  getSavedRequirements
 };
