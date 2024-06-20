@@ -1172,6 +1172,25 @@ const findRoomByUserId = async (req, res) => {
       };
     }));
 
+    console.log(roomDetails);
+    console.log(roomsQuery[0].id);
+
+    for (let i = 0; i < roomsQuery.length; i++) {
+      console.log(roomsQuery[i].id);
+      const unseenMessagesCount = await sequelize.query(
+        'SELECT COUNT(*) as count FROM message_room WHERE seen = false AND (roomId = ? AND senderId != ?)',
+        {
+          replacements: [ roomsQuery[i].id, userId],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+      // Add unseen message count to each user object
+      roomDetails[i].unseenMessagesCount = unseenMessagesCount[0].count;
+
+    }
+
+
+
     res.status(200).json({ error: false, message: "Room Fetch", roomDetails: roomDetails });
   } catch (error) {
     console.error('Error fetching rooms:', error);
