@@ -1,13 +1,15 @@
 const { Sequelize } = require('sequelize');
-require('dotenv').config();
 
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME, 
-  process.env.DB_USER, 
-  process.env.DB_PASSWORD, 
-  {
-  host: process.env.DB_HOST,
+// Replace these values with your actual database credentials
+const DB_NAME = 'bmgf5jemd29cumrpew82';
+const DB_USER = 'ucd1axin7gxhirzt';
+const DB_PASSWORD = 'SA2APblDmP4CKP6MZRU5';
+const DB_HOST = 'bmgf5jemd29cumrpew82-mysql.services.clever-cloud.com';
+
+// Set up the Sequelize instance
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+  host: DB_HOST,
   dialect: 'mysql',
 });
 
