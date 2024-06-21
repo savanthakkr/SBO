@@ -1233,7 +1233,7 @@ const getMessages = async (req, res) => {
     const messages = await sequelize.query(
       'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?) ORDER BY createdAt DESC',
       {
-        replacements: [senderId, receiverId, receiverId, senderId],
+        replacements: [senderId, receiverId, senderId, receiverId],
         type: sequelize.QueryTypes.SELECT
       }
     );
@@ -1404,9 +1404,9 @@ const deleteRequirement = async (req, res) => {
       }
     );
 
-    if (result[0] === 0) {
-      return res.status(404).json({ message: 'Requirement not found', error: true });
-    }
+    // if (result[0] === 0) {
+    //   return res.status(404).json({ message: 'Requirement not found', error: true });
+    // }
 
     res.status(200).json({ message: 'Requirement deleted successfully', error: false });
   } catch (error) {
@@ -1490,8 +1490,7 @@ const clickSellIt = async (req, res) => {
     );
 
     if (existingEntry) {
-      // If the entry already exists, return a response indicating a duplicate entry
-      return res.status(400).json({ error: true, message: "Requirement already exists" });
+      return res.status(400).json({ error: true, message: "Requirement already Sell " });
     }
 
     // If the entry does not exist, insert the new entry
