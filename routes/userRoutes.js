@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const {getSavedRequirements, markMessagesAsSeen, updateUserToken,
+const {fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
@@ -13,9 +13,12 @@ const {getSavedRequirements, markMessagesAsSeen, updateUserToken,
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
 
-router.post('/users/fetchUsersForAdmin', fetchUsersForAdmin);
+router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.post('/users/fetchUserRequirements', fetchUserRequirements);
+router.post('/users/fetchUserProfile', fetchUserProfile);
+router.post('/users/fetchUserRequirementsLetter', fetchUserRequirementsLetter);
 router.post('/users/fetchRequirementDetails', fetchRequirementDetails);
+router.get('/users/fetchUsersForAdminPersonal', fetchUsersForAdminPersonal);
 
 // Register a new user
 router.post('/users/register', registerUser);

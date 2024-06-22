@@ -1490,7 +1490,7 @@ const clickSellIt = async (req, res) => {
     );
 
     if (existingEntry) {
-      return res.status(400).json({ error: true, message: "Requirement already Sell " });
+      return res.status(400).json({ error: true, message: "Requirement already Sell exists" });
     }
 
     // If the entry does not exist, insert the new entry
@@ -1649,36 +1649,27 @@ const loginUserAdmin = async (req, res) => {
 
 const fetchUsersForAdmin = async (req, res) => {
   try {
-    // Fetch all users
+    // Fetch all users with type 'Business'
     const users = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber, type FROM register',
-      { type: QueryTypes.SELECT }
+      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ?',
+      {
+        replacements: ['Business'],
+        type: QueryTypes.SELECT
+      }
     );
 
     // Initialize an array to hold the user details with profiles
     const userDetails = [];
 
     for (const user of users) {
-      let profileData;
-
-      // Fetch profile data based on user type
-      if (user.type === 'Business') {
-        profileData = await sequelize.query(
-          'SELECT * FROM business_profile WHERE user_id = ?',
-          {
-            replacements: [user.id],
-            type: QueryTypes.SELECT
-          }
-        );
-      } else if (user.type === 'Personal') {
-        profileData = await sequelize.query(
-          'SELECT * FROM personal_profile WHERE user_id = ?',
-          {
-            replacements: [user.id],
-            type: QueryTypes.SELECT
-          }
-        );
-      }
+      // Fetch profile data for Business type users
+      const profileData = await sequelize.query(
+        'SELECT * FROM business_profile WHERE user_id = ?',
+        {
+          replacements: [user.id],
+          type: QueryTypes.SELECT
+        }
+      );
 
       // Add user and profile data to the userDetails array
       userDetails.push({
@@ -1696,16 +1687,143 @@ const fetchUsersForAdmin = async (req, res) => {
 };
 
 
+const fetchUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.body; // Assuming userId is passed in the URL params
+
+    // Fetch user details including profile data
+    const user = await sequelize.query(
+      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
+    }
+
+    // Fetch profile data for the user
+    const profileData = await sequelize.query(
+      'SELECT * FROM business_profile WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Add profile data to the user object
+    const userDetails = {
+      ...user[0],
+      profile: profileData[0] || null // Assuming profileData is an array
+    };
+
+    res.status(200).json({ error: false, user: userDetails });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
+
+const fetchUsersForAdminPersonal = async (req, res) => {
+  try {
+    // Fetch all users with type 'Business'
+    const users = await sequelize.query(
+      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ?',
+      {
+        replacements: ['Personal'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Initialize an array to hold the user details with profiles
+    const userDetails = [];
+
+    for (const user of users) {
+      // Fetch profile data for Business type users
+      const profileData = await sequelize.query(
+        'SELECT * FROM business_profile WHERE user_id = ?',
+        {
+          replacements: [user.id],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      // Add user and profile data to the userDetails array
+      userDetails.push({
+        ...user,
+        profile: profileData[0] || null // Assuming profileData is an array
+      });
+    }
+
+    // Send response with user details
+    res.status(200).json({ error: false, users: userDetails });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 
 const fetchUserRequirements = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    // Fetch all requirements for the user
+    // Fetch all requirements for the user where status is 1
     const requirements = await sequelize.query(
-      'SELECT * FROM add_new_requirement WHERE user_id = ?',
+      'SELECT * FROM add_new_requirement WHERE user_id = ? ',
       {
         replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (requirements.length === 0) {
+      return res.status(404).json({ message: 'No requirements found for the user', error: true });
+    }
+
+    // Fetch associated images for each requirement
+    for (const requirement of requirements) {
+      const images = await sequelize.query(
+        'SELECT photo FROM requirment_photo WHERE requirment_id = ?',
+        {
+          replacements: [requirement.id],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      requirement.images = images.map(img => img.photo);
+    }
+
+    // Count the total number of requirements where status is 1
+    const requirementCount = await sequelize.query(
+      'SELECT COUNT(*) AS count FROM add_new_requirement WHERE status = 1',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json({ requirements, totalRequirements: requirementCount[0].count, error: false });
+  } catch (error) {
+    console.error('Error fetching user requirements:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+
+
+const fetchUserRequirementsLetter = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    // Fetch all requirements for the user where the value is 'Letter'
+    const requirements = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE user_id = ? AND value = ?',
+      {
+        replacements: [userId, 'Letter'],
         type: QueryTypes.SELECT
       }
     );
@@ -1733,6 +1851,8 @@ const fetchUserRequirements = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+
 
 
 const fetchRequirementDetails = async (req, res) => {
@@ -1764,16 +1884,29 @@ const fetchRequirementDetails = async (req, res) => {
       }
     );
 
-    if (sellDataWithUser.length === 0) {
-      return res.status(404).json({ message: 'No data found in sell_it_data for the given requirement ID', error: true });
-    }
+    // Count the total number of records in sellDataWithUser
+    const sellDataCount = sellDataWithUser.length;
 
-    res.status(200).json({ requirement: requirement[0], sellData: sellDataWithUser, error: false });
+    const requirementCount = await sequelize.query(
+      'SELECT COUNT(*) AS count FROM add_new_requirement WHERE status = 1',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    res.status(200).json({
+      requirement: requirement[0],
+      totalRequirements: requirementCount[0].count,
+      totalSellData: sellDataCount,
+      sellData: sellDataWithUser,
+      error: false
+    });
   } catch (error) {
     console.error('Error fetching requirement details:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
@@ -1822,7 +1955,10 @@ module.exports = {
   loginUserAdmin,
   fetchUsersForAdmin,
   fetchUserRequirements,
+  fetchUserProfile,
   fetchRequirementDetails,
+  fetchUserRequirementsLetter,
+  fetchUsersForAdminPersonal,
   updateUserToken,
   getUserToken,
   getRoomUserToken,
