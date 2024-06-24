@@ -1567,6 +1567,29 @@ const getUserToken = async (req, res) => {
   }
 };
 
+
+
+const createStory = async (req, res) => {
+  try {
+    const {userId, profile, time} = req.body;
+
+
+    const result = await sequelize.query(
+      'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
+      {
+        replacements: [userId,  profile, time],
+        type: QueryTypes.INSERT
+      }
+    );
+    // Generate and send OTP
+    // await sendOTP(mobileNumber);
+    res.status(200).json({ error: false, message: 'Stroy create successfully' });
+
+  } catch (error) {
+    res.status(500).json({ error: true, message: error });
+  }
+};
+
 const getRoomUserToken = async (req, res) => {
   try {
     // const userId = req.user.id;
@@ -1689,9 +1712,9 @@ const fetchUsersForAdmin = async (req, res) => {
 
 const fetchUserProfile = async (req, res) => {
   try {
-    const { userId } = req.body; // Assuming userId is passed in the URL params
+    const { userId } = req.body; // Assuming userId is passed in the request body
 
-    // Fetch user details including profile data
+    // Fetch user details
     const user = await sequelize.query(
       'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE id = ?',
       {
@@ -1704,14 +1727,29 @@ const fetchUserProfile = async (req, res) => {
       return res.status(404).json({ error: true, message: 'User not found' });
     }
 
-    // Fetch profile data for the user
-    const profileData = await sequelize.query(
-      'SELECT * FROM business_profile WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
+    const userType = user[0].type;
+    let profileData;
+
+    // Fetch profile data based on user type
+    if (userType === 'Business') {
+      profileData = await sequelize.query(
+        'SELECT * FROM business_profile WHERE user_id = ?',
+        {
+          replacements: [userId],
+          type: QueryTypes.SELECT
+        }
+      );
+    } else if (userType === 'Personal') {
+      profileData = await sequelize.query(
+        'SELECT * FROM personal_profile WHERE user_id = ?',
+        {
+          replacements: [userId],
+          type: QueryTypes.SELECT
+        }
+      );
+    } else {
+      return res.status(400).json({ error: true, message: 'Invalid user type' });
+    }
 
     // Add profile data to the user object
     const userDetails = {
@@ -1887,12 +1925,12 @@ const fetchRequirementDetails = async (req, res) => {
     // Count the total number of records in sellDataWithUser
     const sellDataCount = sellDataWithUser.length;
 
-    const requirementCount = await sequelize.query(
-      'SELECT COUNT(*) AS count FROM add_new_requirement WHERE status = 1',
-      {
-        type: QueryTypes.SELECT
-      }
-    );
+    // const requirementCount = await sequelize.query(
+    //   'SELECT COUNT(*) AS count FROM add_new_requirement WHERE status = 1 AND user_id = ?',
+    //   {
+    //     type: QueryTypes.SELECT
+    //   }
+    // );
 
     res.status(200).json({
       requirement: requirement[0],
@@ -1926,6 +1964,7 @@ module.exports = {
   updateUserType,
   createUserProfile,
   createBusinessProfile,
+  createStory,
   createRoom,
   findRoomByUserId,
   getUserProfile,
