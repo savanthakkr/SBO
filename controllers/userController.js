@@ -101,7 +101,7 @@ const sendPasswordOTP = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, batchYear, mobileNumber } = req.body;
+    const { name, batchYear,yearTo, mobileNumber } = req.body;
 
     // Validate mobile number
     const mobileNumberRegex = /^[6-9]\d{9}$/;
@@ -121,9 +121,9 @@ const registerUser = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO register (name, batchYear, mobileNumber) VALUES (?, ?, ?)',
+        'INSERT INTO register (name, batchYear, yearTo, mobileNumber) VALUES (?, ?, ?, ?)',
         {
-          replacements: [name, batchYear, mobileNumber],
+          replacements: [name, batchYear,yearTo, mobileNumber],
           type: QueryTypes.INSERT
         }
       );
@@ -265,16 +265,16 @@ const updateUserType = async (req, res) => {
 
 const createUserProfile = async (req, res) => {
   try {
-    const { userId, email, qualification, occupation, employment, about, profile, cover } = req.body;
+    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address } = req.body;
 
-    // Validate mobile number
+    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.log("Invalid email");
-      res.status(400).json({ error: true, message: 'Invalid email' });
-      return;
+      return res.status(400).json({ error: true, message: 'Invalid email' });
     }
 
+    // Check if user already has a profile
     const existingUser = await sequelize.query(
       'SELECT * FROM personal_profile WHERE user_id = ?',
       {
@@ -283,28 +283,35 @@ const createUserProfile = async (req, res) => {
       }
     );
 
-    if (existingUser.length === 0) {
-      const result = await sequelize.query(
-        'INSERT INTO personal_profile (user_id,email,qualification,occupation,employment,about,profile,cover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        {
-          replacements: [userId, email, qualification, occupation, employment, about, profile, cover],
-          type: QueryTypes.INSERT
-        }
-      );
-      // Generate and send OTP
-      // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false, message: 'Personal Profile create successfully' });
-    } else {
-      res.status(400).json({ error: true, message: 'Personal Profile is already exist' });
+    if (existingUser.length > 0) {
+      console.log("Personal Profile already exists for user ID:", userId);
+      return res.status(400).json({ error: true, message: 'Personal Profile already exists' });
     }
+
+    // Create new profile
+    await sequelize.query(
+      'INSERT INTO personal_profile (user_id, email, qualification, qAddress, occupation, oAddress, employment, about, profile, cover, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      {
+        replacements: [userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address],
+        type: QueryTypes.INSERT
+      }
+    );
+
+    // Optionally, generate and send OTP
+    // await sendOTP(mobileNumber);
+
+    console.log("Personal Profile created successfully for user ID:", userId);
+    return res.status(200).json({ error: false, message: 'Personal Profile created successfully' });
+
   } catch (error) {
-    res.status(500).json({ error: true, message: error });
+    console.error('Error creating personal profile:', error);
+    return res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
 const createBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, address2, state, city, pinCode, homeTwon } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -324,9 +331,9 @@ const createBusinessProfile = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,homeTwon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,address2,state,city,pincode,homeTwon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon],
+          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon],
           type: QueryTypes.INSERT
         }
       );
@@ -418,6 +425,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
       WHERE add_new_requirement.user_id IN (:idArray) 
       AND add_new_requirement.user_id != :userId 
       AND add_new_requirement.value = 'Now'
+      AND add_new_requirement.status = '0'
     `;
 
     const requirements = await sequelize.query(requirementsQuery, {
@@ -425,16 +433,38 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
       type: sequelize.QueryTypes.SELECT
     });
 
+    // Fetch sell data for each requirement and compute the user count
+    for (let i = 0; i < requirements.length; i++) {
+      const sellDataWithUser = await sequelize.query(
+        `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
+         FROM sell_it_data sid
+         JOIN register r ON sid.user_id = r.id
+         WHERE sid.requirement_id = ?`,
+        {
+          replacements: [requirements[i].id],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+      
+      // Attach sell data to each requirement
+      requirements[i].sellData = sellDataWithUser;
+
+      // Compute and attach user count
+      requirements[i].userCount = sellDataWithUser.length;
+    }
+
     const groupedRequirements = requirements.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, ...requirementData } = row;
+      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, sellData, userCount, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
-          id,  // Include the id explicitly
+          id, // Include the requirement ID here
           ...requirementData,
           userName,
           userType,
           isSaved: !!savedRequirementId,
           images: [],
+          sellData: sellData || [], // Include sell data here
+          userCount: userCount || 0, // Attach user count
         };
       }
       if (PHID) {
@@ -451,6 +481,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
@@ -560,7 +591,7 @@ const getAllUserRequirements = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const requirments = await sequelize.query(
+    const requirements = await sequelize.query(
       'SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.user_id = ?',
       {
         replacements: [userId],
@@ -568,13 +599,36 @@ const getAllUserRequirements = async (req, res) => {
       }
     );
 
-    const groupedRequirements = requirments.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, ...requirementData } = row;
+
+    for (let i = 0; i < requirements.length; i++) {
+      console.log(requirements[i].id);
+      const sellDataWithUser = await sequelize.query(
+        `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
+         FROM sell_it_data sid
+         JOIN register r ON sid.user_id = r.id
+         WHERE sid.requirement_id = ?`,
+        {
+          replacements: [requirements[i].id],
+          type: QueryTypes.SELECT
+        }
+      );
+      
+      // Attach sell data to each requirement
+      requirements[i].sellData = sellDataWithUser;
+
+      // Compute and attach user count
+      requirements[i].userCount = sellDataWithUser.length;
+    }
+
+    const groupedRequirements = requirements.reduce((acc, row) => {
+      const { id, PHID, RIMAGE, sellData, userCount, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
           id, // Include the requirement ID here
           ...requirementData,
           images: [],
+          sellData: sellData || [], // Include sell data here
+          userCount: userCount || 0, // Attach user count
         };
       }
       if (PHID) {
@@ -588,27 +642,41 @@ const getAllUserRequirements = async (req, res) => {
     res.status(200).json({ error: false, message: "Requirment Fetch", allRequirment: resultArray });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+
 
 const getAllUsers = async (req, res) => {
   try {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT r.*,uf.id AS FID,uf.user_id AS REQID,uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ?',
+      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ?',
       {
         replacements: [userId, userId, '2', userId],
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users });
+
+    let userCount = 0;
+
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].FSTATUS === '0') {
+        userCount++;
+      }
+    }
+
+    console.log(userCount);
+
+    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 const getFollowAllUsers = async (req, res) => {
   try {
@@ -1039,17 +1107,30 @@ const getAllUsersIfFollow = async (req, res) => {
       }
     );
 
-    // Initialize unseen messages count for each user
+    // Initialize unseen messages count and last message creation time for each user
     for (let i = 0; i < users.length; i++) {
       const unseenMessagesCount = await sequelize.query(
-        'SELECT COUNT(*) as count FROM message WHERE seen = false AND (senderId = ? AND reciverId = ?)',
+        'SELECT COUNT(*) as count FROM message WHERE seen = false AND senderId = ? AND reciverId = ?',
         {
-          replacements: [ users[i].id, userId],
+          replacements: [users[i].id, userId],
           type: sequelize.QueryTypes.SELECT
         }
       );
-      // Add unseen message count to each user object
+
+      // Get the last message creation time
+      const lastMessageTime = await sequelize.query(
+        `SELECT createdAt FROM message 
+         WHERE (senderId = ? AND reciverId = ?) OR (senderId = ? AND reciverId = ?)
+         ORDER BY createdAt DESC LIMIT 1`,
+        {
+          replacements: [users[i].id, userId, userId, users[i].id],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+
+      // Add unseen message count and last message time to each user object
       users[i].unseenMessagesCount = unseenMessagesCount[0].count;
+      users[i].lastMessageTime = lastMessageTime.length > 0 ? lastMessageTime[0].createdAt : null;
     }
 
     res.status(200).json({ error: false, message: "Users fetched successfully", chatUsers: users });
@@ -1058,6 +1139,7 @@ const getAllUsersIfFollow = async (req, res) => {
     res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
+
 
 
 const markMessagesAsSeen = async (req, res) => {
@@ -1147,7 +1229,7 @@ const findRoomByUserId = async (req, res) => {
       return res.status(404).json({ error: true, message: 'No rooms found for this user' });
     }
 
-    // Fetch participants for each room
+    // Fetch participants and message details for each room
     const roomDetails = await Promise.all(roomsQuery.map(async (room) => {
       const participantsQuery = await sequelize.query(
         `
@@ -1162,36 +1244,30 @@ const findRoomByUserId = async (req, res) => {
         }
       );
 
+      const lastMessageTimeQuery = await sequelize.query(
+        `SELECT createdAt FROM message_room 
+         WHERE roomId = ?
+         ORDER BY createdAt DESC LIMIT 1`,
+        {
+          replacements: [room.id],
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+
+      const lastMessageTime = lastMessageTimeQuery.length > 0 ? lastMessageTimeQuery[0].createdAt : null;
+
       return {
         room: {
           id: room.id,
           user_id: room.user_id,
-          created_at: room.created_at
+          created_at: room.created_at,
+          lastMessageTime: lastMessageTime
         },
         participants: participantsQuery
       };
     }));
 
-    console.log(roomDetails);
-    console.log(roomsQuery[0].id);
-
-    for (let i = 0; i < roomsQuery.length; i++) {
-      console.log(roomsQuery[i].id);
-      const unseenMessagesCount = await sequelize.query(
-        'SELECT COUNT(*) as count FROM message_room WHERE seen = false AND (roomId = ? AND senderId != ?)',
-        {
-          replacements: [ roomsQuery[i].id, userId],
-          type: sequelize.QueryTypes.SELECT
-        }
-      );
-      // Add unseen message count to each user object
-      roomDetails[i].unseenMessagesCount = unseenMessagesCount[0].count;
-
-    }
-
-
-
-    res.status(200).json({ error: false, message: "Room Fetch", roomDetails: roomDetails });
+    res.status(200).json({ error: false, message: "Rooms fetched successfully", roomDetails: roomDetails });
   } catch (error) {
     console.error('Error fetching rooms:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1386,6 +1462,46 @@ const createProduct = async (req, res) => {
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const getUserStory = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+
+    const users = await sequelize.query(
+      `SELECT id FROM register
+      WHERE id != :userId 
+      AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
+           OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+      {
+        replacements: { userId },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    const idArray = users.map(user => user.id);
+    if (idArray.length === 0) {
+      return res.status(200).json({ error: false, message: "No story found", UserStory: [] });
+    }
+
+    // Add the current user to the array, but filter their requirements below
+    idArray.push(userId);
+
+    const status = "1";
+    const usersStory = await sequelize.query(
+      'SELECT * FROM ads_photo WHERE user_id IN (:idArray) AND user_id != :userId AND status = :status AND NOW() <= DATE_ADD(created_at, INTERVAL CAST(story_time AS UNSIGNED) HOUR)',
+      {
+        replacements: { idArray, userId, status },
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Story Fetch", UserStory: usersStory });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
 
@@ -2000,6 +2116,7 @@ module.exports = {
   fetchUsersForAdminPersonal,
   updateUserToken,
   getUserToken,
+  getUserStory,
   getRoomUserToken,
   markMessagesAsSeen,
   getSavedRequirements
