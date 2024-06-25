@@ -142,6 +142,36 @@ const registerUser = async (req, res) => {
 };
 
 
+const updateUserSubscription = async (req, res) => {
+  try {
+    const { userId, subscriptionPlan } = req.body;
+
+    const subscriptionStartDate = new Date();
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setFullYear(subscriptionEndDate.getFullYear() + 1); // Set end date to one year from now
+
+    const result = await sequelize.query(
+      'UPDATE register SET subscriptionPlan = ?, subscriptionStartDate = ?, subscriptionEndDate = ? WHERE id = ?',
+      {
+        replacements: [subscriptionPlan, subscriptionStartDate, subscriptionEndDate, userId],
+        type: QueryTypes.UPDATE
+      }
+    );
+
+    if (result[0] === 0) {
+      return res.status(400).json({ error: true, message: 'User not found or no changes made' });
+    }
+
+    res.status(200).json({ error: false, message: 'Subscription plan updated successfully' });
+  } catch (error) {
+    console.error('Error updating subscription plan:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
+
+
+
 const accountSid = 'ACd9806a2bd9b26c568fef24290dbfdbec';
 const authToken = 'c3362abb36dbc9d3ab407886b70c1452';
 const client = require('twilio')(accountSid, authToken);
@@ -734,7 +764,7 @@ const getBusinessProfile = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.mobileNumber as PHONE FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
+      'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.mobileNumber as PHONE,register.subscriptionPlan as subscriptionPlan, register.subscriptionEndDate as subscriptionEndDate FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -746,6 +776,9 @@ const getBusinessProfile = async (req, res) => {
     res.status(500).json({ messsage: 'Internal server error', error: true });
   }
 };
+
+
+
 
 const sendFollowRequest = async (req, res) => {
   try {
@@ -767,20 +800,84 @@ const sendFollowRequest = async (req, res) => {
       }
     );
 
-    if (existingUser.length === 0 && existingUser1.length === 0) {
-      const result = await sequelize.query(
-        'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
-        {
-          replacements: [userId, followerId],
-          type: QueryTypes.INSERT
-        }
-      );
-      // Generate and send OTP
-      // await sendOTP(mobileNumber);
-      res.status(200).json({ error: false, message: 'Request send successfully' });
-    } else {
-      res.status(400).json({ error: true, message: 'Request already exist' });
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const totalRequests = await sequelize.query(
+      'SELECT COUNT(*) as total FROM user_follower WHERE user_id = ? AND created_at >= ? AND status != ?',
+      {
+        replacements: [userId, oneMonthAgo, '2'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    console.log(totalRequests);
+
+    const userPlan = await sequelize.query(
+      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (userPlan.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
     }
+
+    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
+    const currentDate = new Date();
+
+    // Check if the subscription is expired
+    if (currentDate > subscriptionEndDate) {
+      res.status(200).json({ error: false, message: 'Subscription is expired', isExpired: true });
+    } else {
+
+      if(userPlan[0].subscriptionPlan == "Silver"){
+        if(totalRequests[0].total < 10){
+          if (existingUser.length === 0 && existingUser1.length === 0) {
+            const result = await sequelize.query(
+              'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
+              {
+                replacements: [userId, followerId],
+                type: QueryTypes.INSERT
+              }
+            );
+            res.status(200).json({ error: false, message: 'Request send successfully' });
+          } else {
+            res.status(400).json({ error: true, message: 'Request already exist' });
+          }
+        }else{
+          res.status(400).json({ error: false, message: 'Your Plan Limit Has Reached' });
+        }
+      }else{
+        if (existingUser.length === 0 && existingUser1.length === 0) {
+          const result = await sequelize.query(
+            'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
+            {
+              replacements: [userId, followerId],
+              type: QueryTypes.INSERT
+            }
+          );
+          res.status(200).json({ error: false, message: 'Request send successfully' });
+        } else {
+          res.status(400).json({ error: true, message: 'Request already exist' });
+        }
+      }
+
+
+      
+    }
+
+
+
+
+
+
+   
+
+
+    
   } catch (error) {
     res.status(500).json({ error: true, message: error });
   }
@@ -2116,6 +2213,7 @@ module.exports = {
   fetchUsersForAdminPersonal,
   updateUserToken,
   getUserToken,
+  updateUserSubscription,
   getUserStory,
   getRoomUserToken,
   markMessagesAsSeen,
