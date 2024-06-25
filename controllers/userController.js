@@ -274,14 +274,23 @@ const OTPVerify = async (req, res) => {
   }
 };
 
+
 const updateUserType = async (req, res) => {
   try {
     const { type, userId } = req.body;
 
+    userStatus = "0";
+
+    if(type == "Business"){
+      userStatus = "1";
+    } else {
+      userStatus = "0";
+    }
+
     await sequelize.query(
-      'UPDATE register SET type = ? WHERE id = ?',
+      'UPDATE register SET type = ?,status = ? WHERE id = ?',
       {
-        replacements: [type, userId],
+        replacements: [type,userStatus, userId],
         type: sequelize.QueryTypes.UPDATE
       }
     );
@@ -830,7 +839,7 @@ const sendFollowRequest = async (req, res) => {
 
     // Check if the subscription is expired
     if (currentDate > subscriptionEndDate) {
-      res.status(200).json({ error: false, message: 'Subscription is expired', isExpired: true });
+      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
     } else {
 
       if(userPlan[0].subscriptionPlan == "Silver"){
@@ -848,7 +857,7 @@ const sendFollowRequest = async (req, res) => {
             res.status(400).json({ error: true, message: 'Request already exist' });
           }
         }else{
-          res.status(400).json({ error: false, message: 'Your Plan Limit Has Reached' });
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
         }
       }else{
         if (existingUser.length === 0 && existingUser1.length === 0) {
@@ -864,20 +873,7 @@ const sendFollowRequest = async (req, res) => {
           res.status(400).json({ error: true, message: 'Request already exist' });
         }
       }
-
-
-      
     }
-
-
-
-
-
-
-   
-
-
-    
   } catch (error) {
     res.status(500).json({ error: true, message: error });
   }
@@ -1528,33 +1524,101 @@ const getAllUserPrductService = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const { userId, title, description, images, type } = req.body;
-    const result = await sequelize.query(
-      'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+
+    const totalProducts = await sequelize.query(
+      'SELECT COUNT(*) as total FROM add_new_productservice WHERE user_id = ?',
       {
-        replacements: [userId, title, description, type],
-        type: QueryTypes.INSERT
+        replacements: [userId],
+        type: QueryTypes.SELECT
       }
     );
 
-    if (result && result[0] != null) {
-      const reqId = result[0];
-      if (Array.isArray(images)) {
+    const userPlan = await sequelize.query(
+      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
 
-        for (let index = 0; index < images.length; index++) {
-          const data = images[index];
-          await sequelize.query(
-            'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+    if (userPlan.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
+    }
+
+    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
+    const currentDate = new Date();
+
+    // Check if the subscription is expired
+    if (currentDate > subscriptionEndDate) {
+      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
+    } else {
+      if(userPlan[0].subscriptionPlan == "Silver"){
+        if(totalProducts[0].total < 5){
+          const result = await sequelize.query(
+            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
             {
-              replacements: [reqId, data],
+              replacements: [userId, title, description, type],
               type: QueryTypes.INSERT
             }
           );
+      
+          if (result && result[0] != null) {
+            const reqId = result[0];
+            if (Array.isArray(images)) {
+      
+              for (let index = 0; index < images.length; index++) {
+                const data = images[index];
+                await sequelize.query(
+                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+                  {
+                    replacements: [reqId, data],
+                    type: QueryTypes.INSERT
+                  }
+                );
+              }
+      
+              res.status(200).json({ message: 'product created!', error: false });
+            }
+          } else {
+            res.status(400).json({ message: 'Data not inserted', error: true });
+          }
+        } else {
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
         }
-
-        res.status(200).json({ message: 'product created!', error: false });
+      } else {
+        if(totalProducts[0].total < 25){
+          const result = await sequelize.query(
+            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+            {
+              replacements: [userId, title, description, type],
+              type: QueryTypes.INSERT
+            }
+          );
+      
+          if (result && result[0] != null) {
+            const reqId = result[0];
+            if (Array.isArray(images)) {
+      
+              for (let index = 0; index < images.length; index++) {
+                const data = images[index];
+                await sequelize.query(
+                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+                  {
+                    replacements: [reqId, data],
+                    type: QueryTypes.INSERT
+                  }
+                );
+              }
+      
+              res.status(200).json({ message: 'product created!', error: false });
+            }
+          } else {
+            res.status(400).json({ message: 'Data not inserted', error: true });
+          }
+        } else {
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+        }
       }
-    } else {
-      res.status(400).json({ message: 'Data not inserted', error: true });
     }
   } catch (error) {
     console.error('Error creating product:', error);
@@ -1786,17 +1850,65 @@ const createStory = async (req, res) => {
   try {
     const {userId, profile, time} = req.body;
 
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    const result = await sequelize.query(
-      'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
+    const totalStory = await sequelize.query(
+      'SELECT COUNT(*) as total FROM ads_photo WHERE user_id = ? AND created_at >= ? AND status = ?',
       {
-        replacements: [userId,  profile, time],
-        type: QueryTypes.INSERT
+        replacements: [userId, oneMonthAgo, '1'],
+        type: QueryTypes.SELECT
       }
     );
-    // Generate and send OTP
-    // await sendOTP(mobileNumber);
-    res.status(200).json({ error: false, message: 'Stroy create successfully' });
+
+    const userPlan = await sequelize.query(
+      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (userPlan.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
+    }
+
+    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
+    const currentDate = new Date();
+
+    if (currentDate > subscriptionEndDate) {
+      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
+    } else {
+      if(userPlan[0].subscriptionPlan == "Silver"){
+        const result = await sequelize.query(
+          'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
+          {
+            replacements: [userId,  profile, time],
+            type: QueryTypes.INSERT
+          }
+        );
+        // Generate and send OTP
+        // await sendOTP(mobileNumber);
+        res.status(200).json({ error: false, message: 'Stroy create successfully' });
+      } else {
+        if(totalStory[0].total < 5){
+          const result = await sequelize.query(
+            'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
+            {
+              replacements: [userId,  profile, time],
+              type: QueryTypes.INSERT
+            }
+          );
+          // Generate and send OTP
+          // await sendOTP(mobileNumber);
+          res.status(200).json({ error: false, message: 'Stroy create successfully' });
+        } else {
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+        }
+      }
+    }
+
+    
 
   } catch (error) {
     res.status(500).json({ error: true, message: error });
@@ -1880,7 +1992,50 @@ const loginUserAdmin = async (req, res) => {
   }
 };
 
+// const fetchUsersForAdmin = async (req, res) => {
+//   try {
+//     // Get current date in YYYY-MM-DD format
+//     const currentDate = new Date().toISOString().slice(0, 10);
 
+//     // Fetch all users with type 'Business' registered on the current day
+//     const users = await sequelize.query(
+//       'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ? AND DATE(created_at) = ?',
+//       {
+//         replacements: ['Business', currentDate],
+//         type: QueryTypes.SELECT
+//       }
+//     );
+
+//     // Initialize an array to hold the user details with profiles
+//     const userDetails = [];
+
+//     for (const user of users) {
+//       // Fetch profile data for Business type users
+//       const profileData = await sequelize.query(
+//         'SELECT * FROM business_profile WHERE user_id = ?',
+//         {
+//           replacements: [user.id],
+//           type: QueryTypes.SELECT
+//         }
+//       );
+
+//       // Add user and profile data to the userDetails array
+//       userDetails.push({
+//         ...user,
+//         profile: profileData[0] || null // Assuming profileData is an array
+//       });
+//     }
+
+//     // Count total number of users registered on the current day
+//     const totalUsers = users.length;
+
+//     // Send response with user details, total count, and current date
+//     res.status(200).json({ error: false, currentDate, totalUsers, users: userDetails });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
 
 
 const fetchUsersForAdmin = async (req, res) => {
@@ -1896,6 +2051,17 @@ const fetchUsersForAdmin = async (req, res) => {
 
     // Initialize an array to hold the user details with profiles
     const userDetails = [];
+
+    const currentDate = new Date().toISOString().slice(0, 10);
+
+    // Fetch all users with type 'Business' registered on the current day
+    const usersCurrentDate = await sequelize.query(
+      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ? AND DATE(created_at) = ?',
+      {
+        replacements: ['Business', currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
 
     for (const user of users) {
       // Fetch profile data for Business type users
@@ -1914,13 +2080,50 @@ const fetchUsersForAdmin = async (req, res) => {
       });
     }
 
-    // Send response with user details
-    res.status(200).json({ error: false, users: userDetails });
+
+    const topUsers = await sequelize.query(
+      `SELECT user_id, COUNT(*) as completedCount
+       FROM add_new_requirement
+       WHERE status = ?
+       GROUP BY user_id
+       ORDER BY completedCount DESC
+       LIMIT 3`,
+      {
+        replacements: ['1'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Fetch user details for the top users
+    const userDetailsPromises = topUsers.map(async (user) => {
+      const userDetail = await sequelize.query(
+        'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE id = ?',
+        {
+          replacements: [user.user_id],
+          type: QueryTypes.SELECT
+        }
+      );
+      return {
+        ...userDetail[0],
+        completedCount: user.completedCount
+      };
+    });
+
+    const userComplatedReq = await Promise.all(userDetailsPromises);
+
+    // Count total number of users
+    const totalUsers = users.length;
+    const totalUsersCurrentDate = usersCurrentDate.length;
+
+
+    // Send response with user details and total count
+    res.status(200).json({ error: false, totalUsers, topUsers: userComplatedReq , totalUsersCurrentDate, users: userDetails });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 const fetchUserProfile = async (req, res) => {
@@ -1929,7 +2132,7 @@ const fetchUserProfile = async (req, res) => {
 
     // Fetch user details
     const user = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE id = ?',
+      'SELECT id, name, batchYear, mobileNumber,subscriptionPlan,subscriptionStartDate,subscriptionEndDate, type FROM register WHERE id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -1992,6 +2195,34 @@ const fetchUsersForAdminPersonal = async (req, res) => {
     // Initialize an array to hold the user details with profiles
     const userDetails = [];
 
+    const currentDate = new Date().toISOString().slice(0, 10);
+
+    // Fetch all users with type 'Business' registered on the current day
+    const usersCurrentDate = await sequelize.query(
+      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ? AND DATE(created_at) = ?',
+      {
+        replacements: ['Personal', currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const usersTotalCurrentDate = await sequelize.query(
+      'SELECT * FROM register WHERE DATE(created_at) = ?',
+      {
+        replacements: [ currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const usersTotal = await sequelize.query(
+      'SELECT * FROM register ',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+
+
     for (const user of users) {
       // Fetch profile data for Business type users
       const profileData = await sequelize.query(
@@ -2009,8 +2240,13 @@ const fetchUsersForAdminPersonal = async (req, res) => {
       });
     }
 
+    const totalUsers = users.length;
+    const totalUsersCurrentDate = usersCurrentDate.length;
+    const TotalUserToday = usersTotalCurrentDate.length;
+    const TotalUser = usersTotal.length;
+
     // Send response with user details
-    res.status(200).json({ error: false, users: userDetails });
+    res.status(200).json({ error: false, totalUsers, totalUsersCurrentDate, TotalUserToday, TotalUser, users: userDetails });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
@@ -2135,15 +2371,7 @@ const fetchRequirementDetails = async (req, res) => {
       }
     );
 
-    // Count the total number of records in sellDataWithUser
     const sellDataCount = sellDataWithUser.length;
-
-    // const requirementCount = await sequelize.query(
-    //   'SELECT COUNT(*) AS count FROM add_new_requirement WHERE status = 1 AND user_id = ?',
-    //   {
-    //     type: QueryTypes.SELECT
-    //   }
-    // );
 
     res.status(200).json({
       requirement: requirement[0],
@@ -2159,6 +2387,198 @@ const fetchRequirementDetails = async (req, res) => {
 };
 
 
+
+const fetchUsersTotalCountAll = async (req, res) => {
+  try {
+    const currentDate = new Date().toISOString().slice(0, 10);
+    const totalRequirements = await sequelize.query(
+      'SELECT * FROM add_new_requirement ',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalRequirementsToday = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE  createdAt = ?',
+      {
+        replacements: [currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalRequirementsComplated = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE status = ?',
+      {
+        replacements: ['1'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+
+    const totalRequirementsComplatedToday = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE  status = ? AND  createdAt = ?',
+      {
+        replacements: ['1', currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalRequirementsLetter = await sequelize.query(
+      'SELECT * FROM add_new_requirement WHERE value = ?',
+      {
+        replacements: ['Letter'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalServicesToday = await sequelize.query(
+      'SELECT * FROM add_new_productservice WHERE Type = ? AND  createdAt = ?',
+      {
+        replacements: ['Service',currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalServices = await sequelize.query(
+      'SELECT * FROM add_new_productservice WHERE Type = ?',
+      {
+        replacements: ['Service'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalProducts = await sequelize.query(
+      'SELECT * FROM add_new_productservice WHERE  Type = ? ',
+      {
+        replacements: ['Product'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalProductsToday = await sequelize.query(
+      'SELECT * FROM add_new_productservice WHERE  status = ? AND  createdAt = ?',
+      {
+        replacements: ['Product', currentDate],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalRequirement = totalRequirements.length;
+    const totalRequirementToday = totalRequirementsToday.length;
+    const totalRequirementComplated = totalRequirementsComplated.length;
+    const totalRequirementComplatedToday = totalRequirementsComplatedToday.length;
+    const totalRequirementLetter = totalRequirementsLetter.length;
+    const totalService = totalServices.length;
+    const totalServiceToday = totalServicesToday.length;
+    const totalProduct = totalProducts.length;
+    const totalProductToday = totalProductsToday.length;
+
+    // Send response with user details
+    res.status(200).json({ error: false, totalService, totalServiceToday, totalProduct, totalProductToday, totalRequirement,totalRequirementToday ,totalRequirementComplated,totalRequirementComplatedToday,totalRequirementLetter, });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+const fetchTopUsersWithCompletedRequirements = async (req, res) => {
+  try {
+    // Fetch top three users who have completed the highest number of requirements
+    const topUsers = await sequelize.query(
+      `SELECT user_id, COUNT(*) as completedCount
+       FROM add_new_requirement
+       WHERE status = ?
+       GROUP BY user_id
+       ORDER BY completedCount DESC
+       LIMIT 3`,
+      {
+        replacements: ['1'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Fetch user details for the top users
+    const userDetailsPromises = topUsers.map(async (user) => {
+      const userDetail = await sequelize.query(
+        'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE id = ?',
+        {
+          replacements: [user.user_id],
+          type: QueryTypes.SELECT
+        }
+      );
+      return {
+        ...userDetail[0],
+        completedCount: user.completedCount
+      };
+    });
+
+    const userDetails = await Promise.all(userDetailsPromises);
+
+    // Send response with the top users and their completed requirements count
+    res.status(200).json({ error: false, topUsers: userDetails });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+const getUserPlan = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+    const users = await sequelize.query(
+      'SELECT subscriptionPlan FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Plan Fetch", UserPlan: users });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
+
+
+const verifyBusinessProfile = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    await sequelize.query(
+      'UPDATE register SET status = ? WHERE id = ?',
+      {
+        replacements: ["0", userId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ error: false, message: 'Business Verified successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
+const verifyStory = async (req, res) => {
+  try {
+    const { storyId } = req.body;
+    await sequelize.query(
+      'UPDATE ads_photo SET status = ? WHERE id = ?',
+      {
+        replacements: ["1", storyId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ error: false, message: 'Business Story Verified successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
 
 
 
@@ -2199,6 +2619,7 @@ module.exports = {
   createProduct,
   getAllUserPrductService,
   deleteRequirement,
+  fetchUsersTotalCountAll,
   updateBusinessProfile,
   saveRequirement,
   updateRequirementStatus,
@@ -2211,11 +2632,15 @@ module.exports = {
   fetchRequirementDetails,
   fetchUserRequirementsLetter,
   fetchUsersForAdminPersonal,
+  fetchTopUsersWithCompletedRequirements,
   updateUserToken,
   getUserToken,
   updateUserSubscription,
   getUserStory,
   getRoomUserToken,
   markMessagesAsSeen,
-  getSavedRequirements
+  getSavedRequirements,
+  getUserPlan,
+  verifyBusinessProfile,
+  verifyStory
 };

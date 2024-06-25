@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const {updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
+const {getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
@@ -14,7 +14,12 @@ const {updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUs
 router.post('/users/loginUserAdmin', loginUserAdmin);
 
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
+router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
+router.get('/users/fetchUsersTotalCountAll', fetchUsersTotalCountAll);
 router.post('/users/getUserStory', getUserStory);
+router.post('/users/getUserPlan', getUserPlan);
+router.post('/users/verifyBusinessProfile', verifyBusinessProfile);
+router.post('/users/verifyStory', verifyStory);
 router.post('/users/fetchUserRequirements', fetchUserRequirements);
 router.post('/users/createStory', createStory);
 router.post('/users/fetchUserProfile', fetchUserProfile);
