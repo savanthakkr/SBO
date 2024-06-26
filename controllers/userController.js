@@ -2042,7 +2042,7 @@ const fetchUsersForAdmin = async (req, res) => {
   try {
     // Fetch all users with type 'Business'
     const users = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ?',
+      'SELECT * FROM register WHERE type = ?',
       {
         replacements: ['Business'],
         type: QueryTypes.SELECT
@@ -2056,7 +2056,7 @@ const fetchUsersForAdmin = async (req, res) => {
 
     // Fetch all users with type 'Business' registered on the current day
     const usersCurrentDate = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ? AND DATE(created_at) = ?',
+      'SELECT * FROM register WHERE type = ? AND DATE(created_at) = ?',
       {
         replacements: ['Business', currentDate],
         type: QueryTypes.SELECT
@@ -2132,7 +2132,7 @@ const fetchUserProfile = async (req, res) => {
 
     // Fetch user details
     const user = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber,subscriptionPlan,subscriptionStartDate,subscriptionEndDate, type FROM register WHERE id = ?',
+      'SELECT id, name, batchYear, mobileNumber,subscriptionPlan,subscriptionStartDate,subscriptionEndDate, type,status FROM register WHERE id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -2546,11 +2546,11 @@ const getUserPlan = async (req, res) => {
 
 const verifyBusinessProfile = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId,status } = req.body;
     await sequelize.query(
       'UPDATE register SET status = ? WHERE id = ?',
       {
-        replacements: ["0", userId],
+        replacements: [status, userId],
         type: sequelize.QueryTypes.UPDATE
       }
     );
@@ -2562,13 +2562,31 @@ const verifyBusinessProfile = async (req, res) => {
   }
 };
 
+const getUserStorybyId = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+    const users = await sequelize.query(
+      'SELECT * FROM ads_photo WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Story Fetch", UserStory: users });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
 const verifyStory = async (req, res) => {
   try {
-    const { storyId } = req.body;
+    const { storyId,status } = req.body;
     await sequelize.query(
       'UPDATE ads_photo SET status = ? WHERE id = ?',
       {
-        replacements: ["1", storyId],
+        replacements: [status, storyId],
         type: sequelize.QueryTypes.UPDATE
       }
     );
@@ -2642,5 +2660,6 @@ module.exports = {
   getSavedRequirements,
   getUserPlan,
   verifyBusinessProfile,
-  verifyStory
+  verifyStory,
+  getUserStorybyId
 };
