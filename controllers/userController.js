@@ -823,7 +823,7 @@ const sendFollowRequest = async (req, res) => {
     console.log(totalRequests);
 
     const userPlan = await sequelize.query(
-      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+      'SELECT subscriptionPlan, subscriptionEndDate,type FROM register WHERE id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -837,13 +837,42 @@ const sendFollowRequest = async (req, res) => {
     const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
     const currentDate = new Date();
 
-    // Check if the subscription is expired
-    if (currentDate > subscriptionEndDate) {
-      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
-    } else {
-
-      if(userPlan[0].subscriptionPlan == "Silver"){
-        if(totalRequests[0].total < 10){
+    if(userPlan[0].type == "Personal"){
+      if (existingUser.length === 0 && existingUser1.length === 0) {
+        const result = await sequelize.query(
+          'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
+          {
+            replacements: [userId, followerId],
+            type: QueryTypes.INSERT
+          }
+        );
+        res.status(200).json({ error: false, message: 'Request send successfully' });
+      } else {
+        res.status(400).json({ error: true, message: 'Request already exist' });
+      }
+    }else{
+      if (currentDate > subscriptionEndDate) {
+        res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
+      } else {
+  
+        if(userPlan[0].subscriptionPlan == "Silver"){
+          if(totalRequests[0].total < 10){
+            if (existingUser.length === 0 && existingUser1.length === 0) {
+              const result = await sequelize.query(
+                'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
+                {
+                  replacements: [userId, followerId],
+                  type: QueryTypes.INSERT
+                }
+              );
+              res.status(200).json({ error: false, message: 'Request send successfully' });
+            } else {
+              res.status(400).json({ error: true, message: 'Request already exist' });
+            }
+          }else{
+            res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+          }
+        }else{
           if (existingUser.length === 0 && existingUser1.length === 0) {
             const result = await sequelize.query(
               'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
@@ -856,24 +885,12 @@ const sendFollowRequest = async (req, res) => {
           } else {
             res.status(400).json({ error: true, message: 'Request already exist' });
           }
-        }else{
-          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
-        }
-      }else{
-        if (existingUser.length === 0 && existingUser1.length === 0) {
-          const result = await sequelize.query(
-            'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
-            {
-              replacements: [userId, followerId],
-              type: QueryTypes.INSERT
-            }
-          );
-          res.status(200).json({ error: false, message: 'Request send successfully' });
-        } else {
-          res.status(400).json({ error: true, message: 'Request already exist' });
         }
       }
     }
+
+    // Check if the subscription is expired
+    
   } catch (error) {
     res.status(500).json({ error: true, message: error });
   }
