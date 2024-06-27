@@ -13,6 +13,7 @@ const {updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStor
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
 
+
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
 router.get('/users/fetchUsersTotalCountAll', fetchUsersTotalCountAll);

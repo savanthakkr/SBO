@@ -367,7 +367,6 @@ const updateUserPersonalProfile = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
-
     if (existingUser.length === 0) {
       console.log("Personal Profile does not exist for user ID:", userId);
       return res.status(404).json({ error: true, message: 'Personal Profile does not exist' });
