@@ -304,7 +304,7 @@ const updateUserType = async (req, res) => {
 
 const createUserProfile = async (req, res) => {
   try {
-    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address } = req.body;
+    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown } = req.body;
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -329,9 +329,9 @@ const createUserProfile = async (req, res) => {
 
     // Create new profile
     await sequelize.query(
-      'INSERT INTO personal_profile (user_id, email, qualification, qAddress, occupation, oAddress, employment, about, profile, cover, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO personal_profile (user_id, email, qualification, qAddress, occupation, oAddress, employment, about, profile, cover, address,homeTown) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       {
-        replacements: [userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address],
+        replacements: [userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown],
         type: QueryTypes.INSERT
       }
     );
@@ -344,6 +344,49 @@ const createUserProfile = async (req, res) => {
 
   } catch (error) {
     console.error('Error creating personal profile:', error);
+    return res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
+const updateUserPersonalProfile = async (req, res) => {
+  try {
+    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown } = req.body;
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log("Invalid email");
+      return res.status(400).json({ error: true, message: 'Invalid email' });
+    }
+
+    // Check if user profile exists
+    const existingUser = await sequelize.query(
+      'SELECT * FROM personal_profile WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (existingUser.length === 0) {
+      console.log("Personal Profile does not exist for user ID:", userId);
+      return res.status(404).json({ error: true, message: 'Personal Profile does not exist' });
+    }
+
+    // Update profile
+    await sequelize.query(
+      'UPDATE personal_profile SET email = ?, qualification = ?, qAddress = ?, occupation = ?, oAddress = ?, employment = ?, about = ?, profile = ?, cover = ?, address = ?, homeTown = ? WHERE user_id = ?',
+      {
+        replacements: [email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown, userId],
+        type: QueryTypes.UPDATE
+      }
+    );
+
+    console.log("Personal Profile updated successfully for user ID:", userId);
+    return res.status(200).json({ error: false, message: 'Personal Profile updated successfully' });
+
+  } catch (error) {
+    console.error('Error updating personal profile:', error);
     return res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
@@ -384,6 +427,40 @@ const createBusinessProfile = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: true, message: error });
+  }
+};
+
+
+const updateBusinessProfile = async (req, res) => {
+  try {
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon  } = req.body;
+
+console.log(req.body);
+    const existingUser = await sequelize.query(
+      'SELECT * FROM business_profile WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (existingUser.length > 0) {
+      await sequelize.query(
+        `UPDATE business_profile 
+         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,address2 = ?,state = ?,city = ?,pinCode = ?,homeTwon = ?
+         WHERE user_id = ?`,
+        {
+          replacements: [business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, userId ],
+          type: QueryTypes.UPDATE
+        }
+      );
+      res.status(200).json({ error: false, message: 'Business Profile updated successfully' });
+    } else {
+      res.status(404).json({ error: true, message: 'Business Profile not found' });
+    }
+  } catch (error) {
+    console.error('Error updating Business Profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
   }
 };
 
@@ -1735,38 +1812,7 @@ const updateRequirementStatus = async (req, res) => {
   }
 };
 
-const updateBusinessProfile = async (req, res) => {
-  try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, homeTwon  } = req.body;
 
-console.log(req.body);
-    const existingUser = await sequelize.query(
-      'SELECT * FROM business_profile WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (existingUser.length > 0) {
-      await sequelize.query(
-        `UPDATE business_profile 
-         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,homeTwon = ?
-         WHERE user_id = ?`,
-        {
-          replacements: [business_name, email, business_type, business_category, description, profile, cover, address, homeTwon, userId ],
-          type: QueryTypes.UPDATE
-        }
-      );
-      res.status(200).json({ error: false, message: 'Business Profile updated successfully' });
-    } else {
-      res.status(404).json({ error: true, message: 'Business Profile not found' });
-    }
-  } catch (error) {
-    console.error('Error updating Business Profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
-  }
-};
 
 
 const clickSellIt = async (req, res) => {
@@ -2629,6 +2675,7 @@ module.exports = {
   getMessages,
   getMessagesRoom,
   updateUserProfile,
+  updateUserPersonalProfile,
   loginUser,
   getAllUsersIfFollow,
   updateUserType,
