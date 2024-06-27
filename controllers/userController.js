@@ -2546,12 +2546,14 @@ const getUserPlan = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT subscriptionPlan FROM register WHERE id = ?',
+      'SELECT subscriptionPlan, status FROM register WHERE id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
       }
     );
+
+    console.log(users);
     res.status(200).json({ error: false, message: "User Plan Fetch", UserPlan: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
