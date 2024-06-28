@@ -781,8 +781,35 @@ const getAllUsers = async (req, res) => {
       if (users[i].FSTATUS === '0') {
         userCount++;
       }
-    }
 
+      let image,category;
+      if (users[i].type === 'Business') {
+        // Fetch image from business table
+        const businessImage = await sequelize.query(
+          'SELECT business_category,profile FROM business_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        image = businessImage.length > 0 ? businessImage[0].profile : null;
+        category = businessImage.length > 0 ? businessImage[0].business_category : null;
+      } else if (users[i].type === 'Personal') {
+        // Fetch image from personal table
+        const personalImage = await sequelize.query(
+          'SELECT profile FROM personal_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        image = personalImage.length > 0 ? personalImage[0].profile : null;
+        category = null;
+      }
+
+      users[i].image = image;
+      users[i].category = category;
+    }
     console.log(userCount);
 
     res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
@@ -1314,9 +1341,36 @@ const getAllUsersIfFollow = async (req, res) => {
         }
       );
 
+      let image,category;
+      if (users[i].type === 'Business') {
+        // Fetch image from business table
+        const businessImage = await sequelize.query(
+          'SELECT business_category,profile FROM business_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        image = businessImage.length > 0 ? businessImage[0].profile : null;
+        category = businessImage.length > 0 ? businessImage[0].business_category : null;
+      } else if (users[i].type === 'Personal') {
+        // Fetch image from personal table
+        const personalImage = await sequelize.query(
+          'SELECT profile FROM personal_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        image = personalImage.length > 0 ? personalImage[0].profile : null;
+        category = null;
+      }
+
       // Add unseen message count and last message time to each user object
       users[i].unseenMessagesCount = unseenMessagesCount[0].count;
       users[i].lastMessageTime = lastMessageTime.length > 0 ? lastMessageTime[0].createdAt : null;
+      users[i].image = image;
+      users[i].category = category;
     }
 
     res.status(200).json({ error: false, message: "Users fetched successfully", chatUsers: users });
