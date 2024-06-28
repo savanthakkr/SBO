@@ -1454,7 +1454,7 @@ const findRoomByUserId = async (req, res) => {
     // Fetch rooms where the user is either the creator or a participant
     const roomsQuery = await sequelize.query(
       `
-      SELECT DISTINCT rooms.id, rooms.user_id, rooms.created_at
+      SELECT DISTINCT rooms.id, rooms.user_id, rooms.g_name, rooms.created_at
       FROM rooms
       LEFT JOIN room_participants ON rooms.id = room_participants.room_id
       WHERE rooms.user_id = ? OR room_participants.user_id = ?
@@ -1500,6 +1500,7 @@ const findRoomByUserId = async (req, res) => {
         room: {
           id: room.id,
           user_id: room.user_id,
+          g_name: room.g_name,
           created_at: room.created_at,
           lastMessageTime: lastMessageTime
         },
@@ -2634,19 +2635,29 @@ const updateGroupName = async (req, res) => {
 
 const updateUserName = async (req, res) => {
   try {
-    const { userId,name,batchYear,yearTo  } = req.body;
+    const { userId, name, batchYear, yearTo } = req.body;
+
+    // Check if all required fields are provided
+    if (userId === undefined || name === undefined || batchYear === undefined || yearTo === undefined) {
+      return res.status(400).json({ error: true, message: 'All fields are required' });
+    }
+
+    // Log the values to confirm they are as expected
+    console.log('Request Body:', req.body);
+
+    // Execute the update query
     await sequelize.query(
-      'UPDATE register SET name = ?, batchYear = ?, yearTo = ? WHERE id = ? ',
+      'UPDATE register SET name = ?, batchYear = ?, yearTo = ? WHERE id = ?',
       {
         replacements: [name, batchYear, yearTo, userId],
-        type: sequelize.QueryTypes.UPDATE
+        type: QueryTypes.UPDATE
       }
     );
 
-    res.json({ error: false, message: 'Profile Updated successfully' });
+    res.json({ error: false, message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Profile  Not Updated' });
+    res.status(500).json({ error: true, message: 'Profile not updated' });
   }
 };
 
