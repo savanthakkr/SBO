@@ -858,7 +858,7 @@ const getPersonalProfile = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT personal_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.mobileNumber as PHONE FROM personal_profile INNER JOIN register ON personal_profile.user_id = register.id WHERE personal_profile.user_id = ?',
+      'SELECT personal_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.yearTo as BYEARTO,register.mobileNumber as PHONE FROM personal_profile INNER JOIN register ON personal_profile.user_id = register.id WHERE personal_profile.user_id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -876,7 +876,7 @@ const getBusinessProfile = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.mobileNumber as PHONE,register.subscriptionPlan as subscriptionPlan, register.subscriptionEndDate as subscriptionEndDate FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
+      'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.yearTo as BYEARTO,register.mobileNumber as PHONE,register.subscriptionPlan as subscriptionPlan, register.subscriptionEndDate as subscriptionEndDate FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -1668,110 +1668,7 @@ const getAllUserPrductService = async (req, res) => {
   }
 };
 
-const createProduct = async (req, res) => {
-  try {
-    const { userId, title, description, images, type } = req.body;
 
-    const totalProducts = await sequelize.query(
-      'SELECT COUNT(*) as total FROM add_new_productservice WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    const userPlan = await sequelize.query(
-      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (userPlan.length === 0) {
-      return res.status(404).json({ error: true, message: 'User not found' });
-    }
-
-    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
-    const currentDate = new Date();
-
-    // Check if the subscription is expired
-    if (currentDate > subscriptionEndDate) {
-      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
-    } else {
-      if(userPlan[0].subscriptionPlan == "Silver"){
-        if(totalProducts[0].total < 5){
-          const result = await sequelize.query(
-            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
-            {
-              replacements: [userId, title, description, type],
-              type: QueryTypes.INSERT
-            }
-          );
-      
-          if (result && result[0] != null) {
-            const reqId = result[0];
-            if (Array.isArray(images)) {
-      
-              for (let index = 0; index < images.length; index++) {
-                const data = images[index];
-                await sequelize.query(
-                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
-                  {
-                    replacements: [reqId, data],
-                    type: QueryTypes.INSERT
-                  }
-                );
-              }
-      
-              res.status(200).json({ message: 'product created!', error: false });
-            }
-          } else {
-            res.status(400).json({ message: 'Data not inserted', error: true });
-          }
-        } else {
-          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
-        }
-      } else {
-        if(totalProducts[0].total < 25){
-          const result = await sequelize.query(
-            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
-            {
-              replacements: [userId, title, description, type],
-              type: QueryTypes.INSERT
-            }
-          );
-      
-          if (result && result[0] != null) {
-            const reqId = result[0];
-            if (Array.isArray(images)) {
-      
-              for (let index = 0; index < images.length; index++) {
-                const data = images[index];
-                await sequelize.query(
-                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
-                  {
-                    replacements: [reqId, data],
-                    type: QueryTypes.INSERT
-                  }
-                );
-              }
-      
-              res.status(200).json({ message: 'product created!', error: false });
-            }
-          } else {
-            res.status(400).json({ message: 'Data not inserted', error: true });
-          }
-        } else {
-          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
 
 
 const getUserStory = async (req, res) => {
@@ -2716,9 +2613,251 @@ const verifyStory = async (req, res) => {
   }
 };
 
+const updateGroupName = async (req, res) => {
+  try {
+    const { roomId,userId,name } = req.body;
+    await sequelize.query(
+      'UPDATE rooms SET g_name = ? WHERE id = ? AND user_id = ?',
+      {
+        replacements: [name, roomId, userId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ error: false, message: 'Group Nane Updated successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Group Name Only Updated By Admin' });
+  }
+};
+
+
+const updateUserName = async (req, res) => {
+  try {
+    const { userId,name,batchYear,yearTo  } = req.body;
+    await sequelize.query(
+      'UPDATE register SET name = ?, batchYear = ?, yearTo = ? WHERE id = ? ',
+      {
+        replacements: [name, batchYear, yearTo, userId],
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+
+    res.json({ error: false, message: 'Profile Updated successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Profile  Not Updated' });
+  }
+};
+
+const createProduct = async (req, res) => {
+  try {
+    const { userId, title, description, images, type } = req.body;
+
+    const totalProducts = await sequelize.query(
+      'SELECT COUNT(*) as total FROM add_new_productservice WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const userPlan = await sequelize.query(
+      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (userPlan.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
+    }
+
+    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
+    const currentDate = new Date();
+
+    // Check if the subscription is expired
+    if (currentDate > subscriptionEndDate) {
+      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
+    } else {
+      if(userPlan[0].subscriptionPlan == "Silver"){
+        if(totalProducts[0].total < 5){
+          const result = await sequelize.query(
+            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+            {
+              replacements: [userId, title, description, type],
+              type: QueryTypes.INSERT
+            }
+          );
+      
+          if (result && result[0] != null) {
+            const reqId = result[0];
+            if (Array.isArray(images)) {
+      
+              for (let index = 0; index < images.length; index++) {
+                const data = images[index];
+                await sequelize.query(
+                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+                  {
+                    replacements: [reqId, data],
+                    type: QueryTypes.INSERT
+                  }
+                );
+              }
+      
+              res.status(200).json({ message: 'product created!', error: false });
+            }
+          } else {
+            res.status(400).json({ message: 'Data not inserted', error: true });
+          }
+        } else {
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+        }
+      } else {
+        if(totalProducts[0].total < 25){
+          const result = await sequelize.query(
+            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+            {
+              replacements: [userId, title, description, type],
+              type: QueryTypes.INSERT
+            }
+          );
+      
+          if (result && result[0] != null) {
+            const reqId = result[0];
+            if (Array.isArray(images)) {
+      
+              for (let index = 0; index < images.length; index++) {
+                const data = images[index];
+                await sequelize.query(
+                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+                  {
+                    replacements: [reqId, data],
+                    type: QueryTypes.INSERT
+                  }
+                );
+              }
+      
+              res.status(200).json({ message: 'product created!', error: false });
+            }
+          } else {
+            res.status(400).json({ message: 'Data not inserted', error: true });
+          }
+        } else {
+          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const updateProductService = async (req, res) => {
+  try {
+    const { productId, title, description, images, Type } = req.body;
+
+    // user_id,Title,Description, Type
+    // Update the main requirement details
+    const updateResult = await sequelize.query(
+      'UPDATE add_new_productservice SET Title = ?, Description = ?, Type = ? WHERE id = ?',
+      {
+        replacements: [title, description, Type, productId],
+        type: QueryTypes.UPDATE
+      }
+    );
+
+    // Check if the update was successful
+    if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
+
+      // Update requirement photos if images are provided
+      if (Array.isArray(images)) {
+        // Delete existing photos for the requirement
+        await sequelize.query(
+          'DELETE FROM productservice_photo WHERE productservice_id = ?',
+          {
+            replacements: [productId],
+            type: QueryTypes.DELETE
+          }
+        );
+
+        // Insert new photos for the requirement
+        for (let index = 0; index < images.length; index++) {
+          const data = images[index];
+          await sequelize.query(
+            'INSERT INTO productservice_photo (productservice_id, photo) VALUES (?, ?)',
+            {
+              replacements: [productId, data],
+              type: QueryTypes.INSERT
+            }
+          );
+        }
+      }
+
+      res.status(200).json({ message: 'updated successfully!', error: false });
+    } else {
+      res.status(404).json({ message: 'not found or could not be updated', error: true });
+    }
+  } catch (error) {
+    console.error('Error updating Requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 
 
+
+const updateRequirement = async (req, res) => {
+  try {
+    const { requirementId, title, description, images, value } = req.body;
+
+    // Update the main requirement details
+    const updateResult = await sequelize.query(
+      'UPDATE add_new_requirement SET Title = ?, Description = ?, value = ? WHERE id = ?',
+      {
+        replacements: [title, description, value, requirementId],
+        type: QueryTypes.UPDATE
+      }
+    );
+
+    // Check if the update was successful
+    if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
+
+      // Update requirement photos if images are provided
+      if (Array.isArray(images)) {
+        // Delete existing photos for the requirement
+        await sequelize.query(
+          'DELETE FROM requirment_photo WHERE requirment_id = ?',
+          {
+            replacements: [requirementId],
+            type: QueryTypes.DELETE
+          }
+        );
+
+        // Insert new photos for the requirement
+        for (let index = 0; index < images.length; index++) {
+          const data = images[index];
+          await sequelize.query(
+            'INSERT INTO requirment_photo (requirment_id, photo) VALUES (?, ?)',
+            {
+              replacements: [requirementId, data],
+              type: QueryTypes.INSERT
+            }
+          );
+        }
+      }
+
+      res.status(200).json({ message: 'Requirement updated successfully!', error: false });
+    } else {
+      res.status(404).json({ message: 'Requirement not found or could not be updated', error: true });
+    }
+  } catch (error) {
+    console.error('Error updating Requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 module.exports = {
   registerUser,
@@ -2727,10 +2866,13 @@ module.exports = {
   sendMessage,
   getMessages,
   getMessagesRoom,
+  updateGroupName,
   updateUserProfile,
   updateUserPersonalProfile,
+  updateUserName,
   loginUser,
   getAllUsersIfFollow,
+  updateRequirement,
   updateUserType,
   createUserProfile,
   createBusinessProfile,
@@ -2751,6 +2893,7 @@ module.exports = {
   sendFollowRequest,
   getFollowRequest,
   updateRequestStatus,
+  updateProductService,
   getFollowAllUsers,
   getAllUserRequirementsUserFollo,
   createProduct,
