@@ -527,21 +527,26 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 
     // Fetch requirements, excluding the current user's requirements
     const requirementsQuery = `
-      SELECT add_new_requirement.*, 
-             requirment_photo.id AS PHID, 
-             requirment_photo.photo AS RIMAGE,
-             register.name AS userName,
-             register.type AS userType,
-             saved_requirements.requirement_id AS savedRequirementId
+      SELECT 
+        add_new_requirement.*, 
+        requirment_photo.id AS PHID, 
+        requirment_photo.photo AS RIMAGE,
+        register.name AS userName,
+        register.type AS userType,
+        saved_requirements.requirement_id AS savedRequirementId,
+        COALESCE(business_profile.profile, personal_profile.profile) AS profile
       FROM add_new_requirement
       LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id
       JOIN register ON add_new_requirement.user_id = register.id
       LEFT JOIN saved_requirements ON add_new_requirement.id = saved_requirements.requirement_id AND saved_requirements.user_id = :userId
+      LEFT JOIN business_profile ON register.id = business_profile.user_id AND register.type = 'Business'
+      LEFT JOIN personal_profile ON register.id = personal_profile.user_id AND register.type = 'Personal'
       WHERE add_new_requirement.user_id IN (:idArray) 
       AND add_new_requirement.user_id != :userId 
       AND add_new_requirement.value = 'Now'
       AND add_new_requirement.status = '0'
     `;
+
 
     const requirements = await sequelize.query(requirementsQuery, {
       replacements: { idArray, userId },
@@ -2781,7 +2786,7 @@ const updateProductService = async (req, res) => {
     );
 
     // Check if the update was successful
-    if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
+    // if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
 
       // Update requirement photos if images are provided
       if (Array.isArray(images)) {
@@ -2808,21 +2813,66 @@ const updateProductService = async (req, res) => {
       }
 
       res.status(200).json({ message: 'updated successfully!', error: false });
-    } else {
-      res.status(404).json({ message: 'not found or could not be updated', error: true });
-    }
+    // } else {
+    //   res.status(404).json({ message: 'not found or could not be updated', error: true });
+    // }
   } catch (error) {
     console.error('Error updating Requirement:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
+const deleteImageProductService = async (req, res) => {
+  try {
+    const { imageId } = req.body;
+
+    // Delete the image from the requirment_photo table
+    const deleteResult = await sequelize.query(
+      'DELETE FROM productservice_photo WHERE id = ?',
+      {
+        replacements: [imageId],
+        type: QueryTypes.DELETE
+      }
+    );
+
+    // Check if the deletion was successful
+    res.status(200).json({ message: 'Image deleted successfully!', error: false });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const deleteImage = async (req, res) => {
+  try {
+    const { imageId } = req.body;
+
+    // Delete the image from the requirment_photo table
+    const deleteResult = await sequelize.query(
+      'DELETE FROM requirment_photo WHERE id = ?',
+      {
+        replacements: [imageId],
+        type: QueryTypes.DELETE
+      }
+    );
+
+    // Check if the deletion was successful
+    res.status(200).json({ message: 'Image deleted successfully!', error: false });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 
 
 const updateRequirement = async (req, res) => {
   try {
     const { requirementId, title, description, images, value } = req.body;
+
+
+    console.log(req.body);
 
     // Update the main requirement details
     const updateResult = await sequelize.query(
@@ -2834,7 +2884,7 @@ const updateRequirement = async (req, res) => {
     );
 
     // Check if the update was successful
-    if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
+    // if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
 
       // Update requirement photos if images are provided
       if (Array.isArray(images)) {
@@ -2861,9 +2911,9 @@ const updateRequirement = async (req, res) => {
       }
 
       res.status(200).json({ message: 'Requirement updated successfully!', error: false });
-    } else {
-      res.status(404).json({ message: 'Requirement not found or could not be updated', error: true });
-    }
+    // } else {
+    //   res.status(404).json({ message: 'Requirement not found or could not be updated', error: true });
+    // }
   } catch (error) {
     console.error('Error updating Requirement:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
@@ -2883,6 +2933,7 @@ module.exports = {
   updateUserName,
   loginUser,
   getAllUsersIfFollow,
+  deleteImageProductService,
   updateRequirement,
   updateUserType,
   createUserProfile,
@@ -2894,6 +2945,7 @@ module.exports = {
   getImage,
   OTPVerify,
   sendPasswordOTP,
+  deleteImage,
   OTPVerifyEmail,
   updatepassword,
   createRequirement,

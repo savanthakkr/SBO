@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const {updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
+const {deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,getUserStorybyId,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
@@ -18,6 +18,8 @@ router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
 router.get('/users/fetchUsersTotalCountAll', fetchUsersTotalCountAll);
 router.post('/users/getUserStory', getUserStory);
+router.post('/users/deleteImage', deleteImage);
+router.post('/users/deleteImageProductService', deleteImageProductService);
 router.post('/users/updateProductService', updateProductService);
 router.post('/users/updateUserName', updateUserName);
 router.post('/users/updateRequirement', updateRequirement);
