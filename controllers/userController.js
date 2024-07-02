@@ -566,15 +566,29 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
         }
       );
       
+      const ratingData = await sequelize.query(
+        `SELECT COUNT(*) as total, SUM(rating) as tReview
+         FROM requirement_review WHERE r_id = ?`,
+        {
+          replacements: [requirements[i].id],
+          type: QueryTypes.SELECT,
+        }
+      );
+
+
+      const totalReview = ratingData[0]?.total || 0;
+      const totalRating = ratingData[0]?.tReview || 0;
+
       // Attach sell data to each requirement
       requirements[i].sellData = sellDataWithUser;
-
+      requirements[i].totalReview = totalReview;
+      requirements[i].totalRating = totalRating;
       // Compute and attach user count
       requirements[i].userCount = sellDataWithUser.length;
     }
 
     const groupedRequirements = requirements.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, sellData, userCount, ...requirementData } = row;
+      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, sellData,totalReview, totalRating, userCount, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
           id, // Include the requirement ID here
@@ -583,7 +597,9 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
           userType,
           isSaved: !!savedRequirementId,
           images: [],
-          sellData: sellData || [], // Include sell data here
+          sellData: sellData || [],
+          totalReview: totalReview || 0,
+          totalRating: totalRating || 0, // Include sell data here
           userCount: userCount || 0, // Attach user count
         };
       }
@@ -715,13 +731,11 @@ const getAllUserRequirements = async (req, res) => {
       'SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.user_id = ?',
       {
         replacements: [userId],
-        type: QueryTypes.SELECT
+        type: QueryTypes.SELECT,
       }
     );
 
-
     for (let i = 0; i < requirements.length; i++) {
-      console.log(requirements[i].id);
       const sellDataWithUser = await sequelize.query(
         `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
          FROM sell_it_data sid
@@ -729,25 +743,38 @@ const getAllUserRequirements = async (req, res) => {
          WHERE sid.requirement_id = ?`,
         {
           replacements: [requirements[i].id],
-          type: QueryTypes.SELECT
+          type: QueryTypes.SELECT,
         }
       );
-      
-      // Attach sell data to each requirement
-      requirements[i].sellData = sellDataWithUser;
 
-      // Compute and attach user count
+      const ratingData = await sequelize.query(
+        `SELECT COUNT(*) as total, SUM(rating) as tReview
+         FROM requirement_review WHERE r_id = ?`,
+        {
+          replacements: [requirements[i].id],
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      const totalReview = ratingData[0]?.total || 0;
+      const totalRating = ratingData[0]?.tReview || 0;
+
+      requirements[i].sellData = sellDataWithUser;
+      requirements[i].totalReview = totalReview;
+      requirements[i].totalRating = totalRating;
       requirements[i].userCount = sellDataWithUser.length;
     }
 
     const groupedRequirements = requirements.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, sellData, userCount, ...requirementData } = row;
+      const { id, PHID, RIMAGE, sellData, totalReview, totalRating, userCount, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
           id, // Include the requirement ID here
           ...requirementData,
           images: [],
-          sellData: sellData || [], // Include sell data here
+          sellData: sellData || [],
+          totalReview: totalReview || 0,
+          totalRating: totalRating || 0,
           userCount: userCount || 0, // Attach user count
         };
       }
@@ -765,6 +792,7 @@ const getAllUserRequirements = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
@@ -2920,6 +2948,58 @@ const updateRequirement = async (req, res) => {
   }
 };
 
+const addReviews = async (req, res) => {
+  try {
+    const { user_id, requirement_id,review,rating } = req.body;
+    console.log(req.body);
+
+    // Check if the requirement_id already exists
+    const [existingEntry] = await sequelize.query(
+      'SELECT * FROM requirement_review WHERE r_id = ? AND u_id = ?',
+      {
+        replacements: [requirement_id,user_id],
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (existingEntry) {
+      return res.status(400).json({ error: true, message: "Review already added" });
+    }
+
+    // If the entry does not exist, insert the new entry
+    await sequelize.query(
+      'INSERT INTO requirement_review (r_id, u_id, review,rating) VALUES (?, ?, ?, ?)',
+      {
+        replacements: [requirement_id, user_id, review,rating],
+        type: sequelize.QueryTypes.INSERT,
+      }
+    );
+
+    res.status(200).json({ error: false, message: "Review added" });
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const getUserReviews = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { rId } = req.body;
+    const users = await sequelize.query(
+      'SELECT requirement_review.*,register.name AS UNAME,register.type AS UTYPE FROM requirement_review INNER JOIN register ON register.id = requirement_review.u_id WHERE requirement_review.r_id = ?',
+      {
+        replacements: [rId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "Reviews found", UserReviews: users });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -2986,5 +3066,7 @@ module.exports = {
   getUserPlan,
   verifyBusinessProfile,
   verifyStory,
-  getUserStorybyId
+  getUserStorybyId,
+  addReviews,
+  getUserReviews
 };

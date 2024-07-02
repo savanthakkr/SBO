@@ -4,7 +4,7 @@ const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
 const {deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
-    getUserToken,getUserStorybyId,
+    getUserToken,getUserStorybyId,addReviews,getUserReviews,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
@@ -34,6 +34,8 @@ router.post('/users/fetchUserProfile', fetchUserProfile);
 router.post('/users/fetchUserRequirementsLetter', fetchUserRequirementsLetter);
 router.post('/users/fetchRequirementDetails', fetchRequirementDetails);
 router.post('/users/getUserStorybyId', getUserStorybyId);
+router.post('/users/addReviews', addReviews);
+router.post('/users/getUserReviews', getUserReviews);
 router.get('/users/fetchUsersForAdminPersonal', fetchUsersForAdminPersonal);
 
 // Register a new user
