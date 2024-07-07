@@ -1583,7 +1583,7 @@ const getMessages = async (req, res) => {
     const messages = await sequelize.query(
       'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?) ORDER BY createdAt DESC',
       {
-        replacements: [senderId, receiverId, senderId, receiverId],
+        replacements: [senderId, receiverId, receiverId, senderId],
         type: sequelize.QueryTypes.SELECT
       }
     );
@@ -1626,11 +1626,30 @@ const getMessages = async (req, res) => {
 
         // Attach the requirement details to the message
         messages[i].requirement = Object.values(groupedRequirements)[0] || null;
+      } else if (messages[i].type === "profileB") {
+        const userId = messages[i].content; 
+        const users = await sequelize.query(
+          'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.yearTo as BYEARTO,register.mobileNumber as PHONE,register.subscriptionPlan as subscriptionPlan, register.subscriptionEndDate as subscriptionEndDate FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
+          {
+            replacements: [userId],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        messages[i].profile = users[0] || null;
+      } else if (messages[i].type === "profileP") {
+        const userId = messages[i].content; // Assuming userId is stored in content for profileP type
+        const users = await sequelize.query(
+          'SELECT personal_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.yearTo as BYEARTO,register.mobileNumber as PHONE FROM personal_profile INNER JOIN register ON personal_profile.user_id = register.id WHERE personal_profile.user_id = ?',
+          {
+            replacements: [userId],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        messages[i].profile = users[0] || null;
       }
     }
 
-    // Get the total number of unseen messages
-    
+    console.log('Final Messages:', messages); // Log final messages for debugging
 
     res.status(200).json({ 
       error: false, 
@@ -1642,6 +1661,8 @@ const getMessages = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+
 
 
 
