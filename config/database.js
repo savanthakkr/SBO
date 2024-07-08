@@ -3,10 +3,22 @@ require('dotenv').config();
 
 
 // Replace these values with your actual database credentials
+// const DB_NAME = 'sbo_new';
+// const DB_USER = 'admin';
+// const DB_PASSWORD = 'Savanponda1122';
+// const DB_HOST = 'sbo.cpaqskmk40f1.ap-south-1.rds.amazonaws.com';
+
+// // Set up the Sequelize instance
+// const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+//   host: DB_HOST,
+//   dialect: 'mysql',
+// });
+
+
 const DB_NAME = 'sbo_new';
-const DB_USER = 'admin';
-const DB_PASSWORD = 'Savanponda1122';
-const DB_HOST = 'sbo.cpaqskmk40f1.ap-south-1.rds.amazonaws.com';
+const DB_USER = 'root';
+const DB_PASSWORD = 'YourMediumPassword123!';
+const DB_HOST = '89.117.48.158';
 
 // Set up the Sequelize instance
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
