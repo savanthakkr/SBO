@@ -17,8 +17,8 @@ require('dotenv').config();
 
 const DB_NAME = 'sbo_new';
 const DB_USER = 'root';
-const DB_PASSWORD = 'YourMediumPassword123!';
-const DB_HOST = '89.117.48.158';
+const DB_PASSWORD = 'YourMediumPassword123';
+const DB_HOST = '89.117.48.158:3306';
 
 // Set up the Sequelize instance
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
