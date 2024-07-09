@@ -41,7 +41,7 @@ const sessionConfig = {
 };
 
 const app = express();
-const PORT = 3306;
+const PORT = 3304;
 
 app.use(express.json({ limit: '50mb' }));
 
