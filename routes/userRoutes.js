@@ -3,8 +3,8 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
-const {deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
-    getUserToken,getUserStorybyId,addReviews,getUserReviews,
+const {generateQRCode,deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
+    getUserToken,getUserStorybyId,addReviews,getUserReviews,getOwnUserStory,deleteUserStory,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
@@ -18,6 +18,7 @@ router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
 router.get('/users/fetchUsersTotalCountAll', fetchUsersTotalCountAll);
 router.post('/users/getUserStory', getUserStory);
+router.post('/users/generateQRCode', generateQRCode);
 router.post('/users/deleteImage', deleteImage);
 router.post('/users/deleteImageProductService', deleteImageProductService);
 router.post('/users/updateProductService', updateProductService);
@@ -36,6 +37,8 @@ router.post('/users/fetchRequirementDetails', fetchRequirementDetails);
 router.post('/users/getUserStorybyId', getUserStorybyId);
 router.post('/users/addReviews', addReviews);
 router.post('/users/getUserReviews', getUserReviews);
+router.post('/users/getOwnUserStory', getOwnUserStory);
+router.post('/users/deleteUserStory', deleteUserStory);
 router.get('/users/fetchUsersForAdminPersonal', fetchUsersForAdminPersonal);
 
 // Register a new user

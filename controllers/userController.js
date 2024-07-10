@@ -9,6 +9,8 @@ const path = require('path');
 const otpGenerator = require('otp-generator');
 const nodemailer = require('nodemailer');
 const { error } = require('console');
+const QRCode = require('qrcode');
+
 
 
 
@@ -1765,6 +1767,50 @@ const getUserStory = async (req, res) => {
   }
 };
 
+const getOwnUserStory = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+    const usersStory = await sequelize.query(
+      'SELECT * FROM ads_photo WHERE user_id = ? AND NOW() <= DATE_ADD(created_at, INTERVAL CAST(story_time AS UNSIGNED) HOUR)',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Story Fetch", UserStory: usersStory });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const deleteUserStory = async (req, res) => {
+  try {
+    const { storyId } = req.body;
+    if (!storyId) {
+      return res.status(400).json({ message: 'Story ID is required', error: true });
+    }
+
+    const result = await sequelize.query(
+      'DELETE FROM ads_photo WHERE id = ?',
+      {
+        replacements: [storyId],
+        type: QueryTypes.DELETE,
+      }
+    );
+
+    // if (result[0] === 0) {
+    //   return res.status(404).json({ message: 'Requirement not found', error: true });
+    // }
+
+    res.status(200).json({ message: 'Requirement deleted successfully', error: false });
+  } catch (error) {
+    console.error('Error deleting requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 const deleteRequirement = async (req, res) => {
   try {
     const { requirementId } = req.body;
@@ -3021,10 +3067,36 @@ const getUserReviews = async (req, res) => {
   }
 };
 
+
+const generateQRCode = async (req, res) => {
+  try {
+    const { website, tableNumber } = req.body;
+
+    if (!website || !tableNumber) {
+      return res.status(400).json({ error: true, message: 'Website and table number are required' });
+    }
+
+    const qrData = `${website}?table=${tableNumber}`;
+
+    QRCode.toDataURL(qrData, (err, qrCode) => {
+      if (err) {
+        console.error('Error generating QR code:', err);
+        return res.status(500).json({ error: true, message: 'Error generating QR code' });
+      }
+
+      res.status(201).json({ error: false, message: 'QR code generated successfully', qrCode });
+    });
+  } catch (error) {
+    console.error('Error processing request:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
   sendMessageRoom,
+  generateQRCode,
   sendMessage,
   getMessages,
   getMessagesRoom,
@@ -3089,5 +3161,7 @@ module.exports = {
   verifyStory,
   getUserStorybyId,
   addReviews,
-  getUserReviews
+  getUserReviews,
+  getOwnUserStory,
+  deleteUserStory
 };
