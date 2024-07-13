@@ -3092,6 +3092,28 @@ const generateQRCode = async (req, res) => {
   }
 };
 
+const addCareer = async (req, res) => {
+  try{
+    const { userId, name, mobile,resume } = req.body;
+  console.log(req.body);
+
+  // await sequelize.query("SET SESSION max_allowed_packet=67108864");
+
+  await sequelize.query(
+    'INSERT INTO career (user_id, name, mobile,resume) VALUES (?, ?, ?, ?)',
+    {
+      replacements: [userId, name, mobile,resume],
+      type: sequelize.QueryTypes.INSERT,
+    }
+  );
+
+  res.status(200).json({error: false,message: "Add successfully"});
+  }catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+}
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -3163,5 +3185,6 @@ module.exports = {
   addReviews,
   getUserReviews,
   getOwnUserStory,
-  deleteUserStory
+  deleteUserStory,
+  addCareer
 };
