@@ -3114,6 +3114,7 @@ const addCareer = async (req, res) => {
   }
 }
 
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
