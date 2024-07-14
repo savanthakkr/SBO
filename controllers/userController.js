@@ -103,7 +103,7 @@ const sendPasswordOTP = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, batchYear,yearTo, mobileNumber } = req.body;
+    const { name, batchYear,yearTo, mobileNumber, reference } = req.body;
 
     // Validate mobile number
     const mobileNumberRegex = /^[6-9]\d{9}$/;
@@ -123,9 +123,9 @@ const registerUser = async (req, res) => {
 
     if (existingUser.length === 0) {
       const result = await sequelize.query(
-        'INSERT INTO register (name, batchYear, yearTo, mobileNumber) VALUES (?, ?, ?, ?)',
+        'INSERT INTO register (name, batchYear, yearTo, mobileNumber, reference) VALUES (?, ?, ?, ?, ?)',
         {
-          replacements: [name, batchYear,yearTo, mobileNumber],
+          replacements: [name, batchYear,yearTo, mobileNumber, reference],
           type: QueryTypes.INSERT
         }
       );
