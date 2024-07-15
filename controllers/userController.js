@@ -437,7 +437,7 @@ const updateBusinessProfile = async (req, res) => {
   try {
     const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon  } = req.body;
 
-console.log(req.body);
+    console.log(req.body);
     const existingUser = await sequelize.query(
       'SELECT * FROM business_profile WHERE user_id = ?',
       {
