@@ -1700,7 +1700,7 @@ const getAllUserPrductService = async (req, res) => {
 
 
     const requirments = await sequelize.query(
-      'SELECT add_new_productservice.*,productservice_photo.id AS PHID,productservice_photo.photo AS RIMAGE FROM add_new_productservice LEFT JOIN productservice_photo ON add_new_productservice.id = productservice_photo.productservice_id WHERE add_new_productservice.user_id = ?',
+      'SELECT add_new_productservice.*, productservice_photo.id AS PHID, productservice_photo.photo AS RIMAGE FROM add_new_productservice LEFT JOIN productservice_photo ON add_new_productservice.id = productservice_photo.productservice_id WHERE add_new_productservice.user_id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
@@ -1711,6 +1711,7 @@ const getAllUserPrductService = async (req, res) => {
       const { id, PHID, RIMAGE, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
+          id,
           ...requirementData,
           images: [],
         };
@@ -2874,7 +2875,8 @@ const updateProductService = async (req, res) => {
   try {
     const { productId, title, description, images, Type } = req.body;
 
-    // user_id,Title,Description, Type
+    console.log(req.body);
+
     // Update the main requirement details
     const updateResult = await sequelize.query(
       'UPDATE add_new_productservice SET Title = ?, Description = ?, Type = ? WHERE id = ?',
@@ -2885,41 +2887,35 @@ const updateProductService = async (req, res) => {
     );
 
     // Check if the update was successful
-    // if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
+    if (Array.isArray(images) && images.length > 0) {
+      // Delete existing photos for the requirement
+      await sequelize.query(
+        'DELETE FROM productservice_photo WHERE productservice_id = ?',
+        {
+          replacements: [productId],
+          type: QueryTypes.DELETE
+        }
+      );
 
-      // Update requirement photos if images are provided
-      if (Array.isArray(images)) {
-        // Delete existing photos for the requirement
+      // Insert new photos for the requirement
+      for (let index = 0; index < images.length; index++) {
+        const data = images[index];
         await sequelize.query(
-          'DELETE FROM productservice_photo WHERE productservice_id = ?',
+          'INSERT INTO productservice_photo (productservice_id, photo) VALUES (?, ?)',
           {
-            replacements: [productId],
-            type: QueryTypes.DELETE
+            replacements: [productId, data],
+            type: QueryTypes.INSERT
           }
         );
-
-        // Insert new photos for the requirement
-        for (let index = 0; index < images.length; index++) {
-          const data = images[index];
-          await sequelize.query(
-            'INSERT INTO productservice_photo (productservice_id, photo) VALUES (?, ?)',
-            {
-              replacements: [productId, data],
-              type: QueryTypes.INSERT
-            }
-          );
-        }
       }
-
-      res.status(200).json({ message: 'updated successfully!', error: false });
-    // } else {
-    //   res.status(404).json({ message: 'not found or could not be updated', error: true });
-    // }
+    }
+    res.status(200).json({ message: 'Requirement updated successfully!', error: false });
   } catch (error) {
     console.error('Error updating Requirement:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 const deleteImageProductService = async (req, res) => {
   try {
@@ -2982,10 +2978,6 @@ const updateRequirement = async (req, res) => {
       }
     );
 
-    // Check if the update was successful
-    // if (updateResult && updateResult[0] != null && updateResult[0].affectedRows > 0) {
-
-      // Update requirement photos if images are provided
       if (Array.isArray(images)) {
         // Delete existing photos for the requirement
         await sequelize.query(
