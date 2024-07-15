@@ -394,7 +394,7 @@ const updateUserPersonalProfile = async (req, res) => {
 
 const createBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, address2, state, city, pinCode, homeTwon } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, address2, state, city, pinCode, homeTwon, _myList } = req.body;
 
     // Validate mobile number
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -413,10 +413,11 @@ const createBusinessProfile = async (req, res) => {
     );
 
     if (existingUser.length === 0) {
+      const tagsList = _myList.join(',');
       const result = await sequelize.query(
-        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,address2,state,city,pincode,homeTwon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,address2,state,city,pincode,homeTwon, tagsList) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon],
+          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, tagsList],
           type: QueryTypes.INSERT
         }
       );
@@ -817,11 +818,11 @@ const getAllUsers = async (req, res) => {
         userCount++;
       }
 
-      let image,category;
+      let image,category,tagsList;
       if (users[i].type === 'Business') {
         // Fetch image from business table
         const businessImage = await sequelize.query(
-          'SELECT business_category,profile FROM business_profile WHERE user_id = ?',
+          'SELECT business_category,profile,tagsList FROM business_profile WHERE user_id = ?',
           {
             replacements: [users[i].id],
             type: sequelize.QueryTypes.SELECT
@@ -829,6 +830,7 @@ const getAllUsers = async (req, res) => {
         );
         image = businessImage.length > 0 ? businessImage[0].profile : null;
         category = businessImage.length > 0 ? businessImage[0].business_category : null;
+        tagsList = businessImage.length > 0 ? businessImage[0].tagsList : null;
       } else if (users[i].type === 'Personal') {
         // Fetch image from personal table
         const personalImage = await sequelize.query(
@@ -840,10 +842,12 @@ const getAllUsers = async (req, res) => {
         );
         image = personalImage.length > 0 ? personalImage[0].profile : null;
         category = null;
+        tagsList = null;
       }
 
       users[i].image = image;
       users[i].category = category;
+      users[i].tagsList = tagsList;
     }
     console.log(userCount);
 
