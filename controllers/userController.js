@@ -435,7 +435,7 @@ const createBusinessProfile = async (req, res) => {
 
 const updateBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon  } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon,_myList  } = req.body;
 
     console.log(req.body);
     const existingUser = await sequelize.query(
@@ -447,12 +447,15 @@ const updateBusinessProfile = async (req, res) => {
     );
 
     if (existingUser.length > 0) {
+
+      const tagsList = _myList.join(',');
+
       await sequelize.query(
         `UPDATE business_profile 
-         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,address2 = ?,state = ?,city = ?,pinCode = ?,homeTwon = ?
+         SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,address2 = ?,state = ?,city = ?,pinCode = ?,homeTwon = ?,tagsList = ?
          WHERE user_id = ?`,
         {
-          replacements: [business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, userId ],
+          replacements: [business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon,tagsList, userId ],
           type: QueryTypes.UPDATE
         }
       );
