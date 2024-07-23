@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 
 const otpGenerator = require('otp-generator');
+const { broadcastMessage } = require('./soketController');
+
 const nodemailer = require('nodemailer');
 const { error } = require('console');
 const QRCode = require('qrcode');
@@ -435,7 +437,7 @@ const createBusinessProfile = async (req, res) => {
 
 const updateBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon,_myList  } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, _myList  } = req.body;
 
     console.log(req.body);
     const existingUser = await sequelize.query(
@@ -471,11 +473,11 @@ const updateBusinessProfile = async (req, res) => {
 
 const createRequirement = async (req, res) => {
   try {
-    const { userId, title, description, images, value } = req.body;
+    const { userId, title, description,BuySell,SingleMultiple, images, value } = req.body;
     const result = await sequelize.query(
-      'INSERT INTO add_new_requirement (user_id,Title,Description, value) VALUES (?,?,?,?)',
+      'INSERT INTO add_new_requirement (user_id,Title,Description,buy_sell,single_multi	, value) VALUES (?,?,?,?,?,?)',
       {
-        replacements: [userId, title, description, value],
+        replacements: [userId, title, description,BuySell,SingleMultiple, value],
         type: QueryTypes.INSERT
       }
     );
@@ -825,7 +827,7 @@ const getAllUsers = async (req, res) => {
       if (users[i].type === 'Business') {
         // Fetch image from business table
         const businessImage = await sequelize.query(
-          'SELECT business_category,profile,tagsList FROM business_profile WHERE user_id = ?',
+          'SELECT business_category,profile,tagsList,state,city,pincode,homeTwon FROM business_profile WHERE user_id = ?',
           {
             replacements: [users[i].id],
             type: sequelize.QueryTypes.SELECT
@@ -834,6 +836,10 @@ const getAllUsers = async (req, res) => {
         image = businessImage.length > 0 ? businessImage[0].profile : null;
         category = businessImage.length > 0 ? businessImage[0].business_category : null;
         tagsList = businessImage.length > 0 ? businessImage[0].tagsList : null;
+        state = businessImage.length > 0 ? businessImage[0].state : null;
+        city = businessImage.length > 0 ? businessImage[0].city : null;
+        pincode = businessImage.length > 0 ? businessImage[0].pincode : null;
+        homeTwon = businessImage.length > 0 ? businessImage[0].homeTwon : null;
       } else if (users[i].type === 'Personal') {
         // Fetch image from personal table
         const personalImage = await sequelize.query(
@@ -846,11 +852,19 @@ const getAllUsers = async (req, res) => {
         image = personalImage.length > 0 ? personalImage[0].profile : null;
         category = null;
         tagsList = null;
+        state = null;
+        city = null;
+        pincode = null;
+        homeTwon = null;
       }
 
       users[i].image = image;
       users[i].category = category;
       users[i].tagsList = tagsList;
+      users[i].state = state;
+      users[i].city = city;
+      users[i].pincode = pincode;
+      users[i].homeTwon = tagsList;
     }
     console.log(userCount);
 
@@ -1562,26 +1576,27 @@ const findRoomByUserId = async (req, res) => {
 
 
 const sendMessage = async (req, res) => {
-  try{
-    const { content, senderId, receiverId,type } = req.body;
-  console.log(req.body);
+  try {
+    const { content, senderId, receiverId, type } = req.body;
+    console.log(req.body);
 
-  // await sequelize.query("SET SESSION max_allowed_packet=67108864");
+    await sequelize.query(
+      'INSERT INTO message (senderId, reciverId, content, type) VALUES (?, ?, ?, ?)',
+      {
+        replacements: [senderId, receiverId, content, type],
+        type: sequelize.QueryTypes.INSERT,
+      }
+    );
 
-  await sequelize.query(
-    'INSERT INTO message (senderId, reciverId, content,type) VALUES (?, ?, ?, ?)',
-    {
-      replacements: [senderId, receiverId, content,type],
-      type: sequelize.QueryTypes.INSERT,
-    }
-  );
+    const newMessage = { senderId, receiverId, content, type, createdAt: new Date() };
+    broadcastMessage(newMessage);
 
-  res.status(200).json({error: false,message: "send success "});
-  }catch (error) {
-    console.error('Error fetching message:', error);
+    res.status(200).json({ error: false, message: "Send success" });
+  } catch (error) {
+    console.error('Error sending message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
-}
+};
 
 const getMessages = async (req, res) => {
   try {
@@ -1592,7 +1607,7 @@ const getMessages = async (req, res) => {
     const messages = await sequelize.query(
       'SELECT * FROM message WHERE (senderId = ? AND reciverId = ?) OR (reciverId = ? AND senderId = ?) ORDER BY createdAt DESC',
       {
-        replacements: [senderId, receiverId, receiverId, senderId],
+        replacements: [senderId, receiverId, senderId, receiverId],
         type: sequelize.QueryTypes.SELECT
       }
     );
@@ -1879,7 +1894,24 @@ const clickSellIt = async (req, res) => {
     const { user_id, requirement_user_id, requirement_id } = req.body;
     console.log(req.body);
 
-    // Check if the requirement_id already exists
+    // Fetch the single_multi and status of the requirement
+    const [requirement] = await sequelize.query(
+      'SELECT single_multi, status FROM add_new_requirement WHERE id = ?',
+      {
+        replacements: [requirement_id],
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (!requirement) {
+      return res.status(404).json({ error: true, message: "Requirement not found" });
+    }
+
+    if (requirement.status === 1) {
+      return res.status(400).json({ error: true, message: "Requirement already completed" });
+    }
+
+    // Check if the requirement_id already exists in sell_it_data
     const [existingEntry] = await sequelize.query(
       'SELECT * FROM sell_it_data WHERE requirement_id = ?',
       {
@@ -1889,7 +1921,7 @@ const clickSellIt = async (req, res) => {
     );
 
     if (existingEntry) {
-      return res.status(400).json({ error: true, message: "Requirement already Sell exists" });
+      return res.status(400).json({ error: true, message: "Requirement already  exists" });
     }
 
     // If the entry does not exist, insert the new entry
@@ -1901,12 +1933,24 @@ const clickSellIt = async (req, res) => {
       }
     );
 
+    // If the requirement is single, update its status to 1 in add_new_requirement table
+    if (requirement.single_multi == 'Single') {
+      await sequelize.query(
+        'UPDATE add_new_requirement SET status = 1 WHERE id = ?',
+        {
+          replacements: [requirement_id],
+          type: sequelize.QueryTypes.UPDATE,
+        }
+      );
+    }
+
     res.status(200).json({ error: false, message: "Send success" });
   } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 const getClickSellIt = async (req, res) => {

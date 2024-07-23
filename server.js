@@ -9,31 +9,12 @@ const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const http = require('http');
-const { socket: socketFunction } = require('./controllers/soketController');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const { googleLogin } = require('./controllers/userController');
+const { broadcastMessage, socketFunction } = require('./controllers/soketController');
 
-// Passport configuration
-// passport.use(new GoogleStrategy({
-//   clientID: process.env.GOOGLE_CLIENT_ID,
-//   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//  callbackURL: "http://localhost:5000/api/auth/google/callback"
-// }, (accessToken, refreshToken, profile, cb) => {
-//   // User has authenticated, return the user profile
-//   return cb(null, profile._json);
-// }));
-
-// passport.serializeUser((user, next)=>{
-//   return next(null, user)
-// })
-
-// passport.deserializeUser((user, next)=>{
-//   return next(null, user)
-// })
-
-// Session configuration
 const sessionConfig = {
   secret: 'secret',
   resave: false,
@@ -44,7 +25,6 @@ const app = express();
 const PORT = 3304;
 
 app.use(express.json({ limit: '50mb' }));
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -60,14 +40,10 @@ testConnection()
   .then(() => {
     // Routes
     app.use('/api', userRoutes);
-    
+
     app.get('/api/auth/google', passport.authenticate('google', {
       scope: ['profile', 'email']
     }));
-    
-    // app.get('/api/auth/google/callback', passport.authenticate('google', {
-    //   failureRedirect: '/login',
-    // }), googleLogin);
 
     const server = http.createServer(app);
     socketFunction(server);
@@ -79,3 +55,5 @@ testConnection()
   .catch(err => {
     console.error('Unable to start server:', err);
   });
+
+module.exports = { broadcastMessage };

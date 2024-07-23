@@ -1,47 +1,42 @@
-const socketIO = require('socket.io');
-let users = [];
-const typingStatus = new Set();
+const WebSocket = require('ws');
 
-const socket = server => {
-  const io = require('socket.io')(server, {
-    cors: {
-      origin: 'http://192.168.1.3:5000',
-      methods: ['GET', 'POST'],
-      allowedHeaders: ['my-custom-header'],
-      credentials: true
-    }
-  });
+let wss;
 
-  io.on('connection', (socket) => {
-    console.log(`⚡: ${socket.id} user just connected!`);
+const socketFunction = (server) => {
+  wss = new WebSocket.Server({ server });
 
-    socket.on("message", (data) => {
-      io.emit("messageResponse", data);
+  wss.on('connection', ws => {
+    console.log('Client connected');
+
+    ws.on('message', async message => {
+      const parsedMessage = JSON.parse(message);
+      console.log(`Received message: ${message}`);
+
+      // Save message to the database
+      const newMessage = await message.create({
+        content: parsedMessage.content,
+        senderId: parsedMessage.senderId,
+        reciverId: parsedMessage.reciverId,
+        type: parsedMessage.type,
+        createdAt: new Date()
+      });
+
+      // Broadcast the new message to all clients
+      broadcastMessage(newMessage);
     });
 
-    socket.on("typing", (data) => {
-      typingStatus.add(socket.id);
-      socket.broadcast.emit("typingResponse", data);
-    });
-
-    socket.on("stopTyping", () => {
-      typingStatus.delete(socket.id);
-      socket.broadcast.emit("stopTypingResponse");
-    });
-
-    socket.on("newUser", (data) => {
-      users.push(data);
-      io.emit("newUserResponse", users);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('🔥: A user disconnected');
-      users = users.filter((user) => user.socketID !== socket.id);
-      io.emit("newUserResponse", users);
-      typingStatus.delete(socket.id);
-      socket.broadcast.emit("stopTypingResponse");
+    ws.on('close', () => {
+      console.log('Client disconnected');
     });
   });
 };
 
-module.exports = { socket };
+const broadcastMessage = (message) => {
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+};
+
+module.exports = { socketFunction, broadcastMessage };
