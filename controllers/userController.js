@@ -1697,7 +1697,7 @@ const getMessagesRoom = async (req, res) => {
     const { roomId } = req.body;
 
   const messages = await sequelize.query(
-    'SELECT * FROM message_room WHERE roomId = ? ORDER BY createdAt ASC',
+    'SELECT mr.*, r.name AS sender_name FROM message_room mr INNER JOIN register r ON mr.senderId = r.id WHERE mr.roomId = ? ORDER BY mr.createdAt DESC',
     {
       replacements: [roomId],
       type: sequelize.QueryTypes.SELECT
@@ -3135,6 +3135,26 @@ const generateQRCode = async (req, res) => {
   }
 };
 
+
+
+const unFollowUser = async (req, res) => {
+  try {
+    const { reqId } = req.body;
+    await sequelize.query(
+      'DELETE FROM user_follower WHERE id = ?',
+      {
+        replacements: [reqId],
+        type: QueryTypes.DELETE,
+      }
+    );
+    res.json({ error: false, message: "You have unfollow this user" });
+
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
 const addCareer = async (req, res) => {
   try{
     const { userId, name, mobile,resume } = req.body;
@@ -3230,5 +3250,6 @@ module.exports = {
   getUserReviews,
   getOwnUserStory,
   deleteUserStory,
-  addCareer
+  addCareer,
+  unFollowUser
 };
