@@ -283,12 +283,12 @@ const updateUserType = async (req, res) => {
   try {
     const { type, userId } = req.body;
 
-    userStatus = "0";
+    userStatus = "1";
 
     if(type == "Business"){
       userStatus = "1";
     } else {
-      userStatus = "0";
+      userStatus = "1";
     }
 
     await sequelize.query(
@@ -803,15 +803,14 @@ const getAllUserRequirements = async (req, res) => {
 
 
 
-
 const getAllUsers = async (req, res) => {
   try {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ?',
+      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND r.status = ? AND uf.status != ? WHERE r.id != ?',
       {
-        replacements: [userId, userId, '2', userId],
+        replacements: [userId, userId, '0','2', userId],
         type: QueryTypes.SELECT
       }
     );
@@ -2351,7 +2350,7 @@ const fetchUsersForAdminPersonal = async (req, res) => {
   try {
     // Fetch all users with type 'Business'
     const users = await sequelize.query(
-      'SELECT id, name, batchYear, mobileNumber, type FROM register WHERE type = ?',
+      'SELECT id, name, batchYear, mobileNumber,status, type FROM register WHERE type = ?',
       {
         replacements: ['Personal'],
         type: QueryTypes.SELECT
