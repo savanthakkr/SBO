@@ -30,7 +30,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(cors());
 app.use(fileUpload());
-app.use('/public', express.static(path.join(__dirname, './public/')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());

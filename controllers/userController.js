@@ -12,7 +12,43 @@ const { broadcastMessage } = require('./soketController');
 const nodemailer = require('nodemailer');
 const { error } = require('console');
 const QRCode = require('qrcode');
+const multer = require('multer');
 
+// Set up storage with multer to store images in the 'uploads' directory
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Create the 'uploads' directory if it doesn't exist
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+
+
+
+const saveBase64Image = (base64String, folderPath) => {
+  const matches = base64String.match(/^data:(.+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    throw new Error('Invalid base64 string');
+  }
+
+  const ext = matches[1].split('/')[1]; // get the image extension
+  const buffer = Buffer.from(matches[2], 'base64'); // decode base64 string
+
+  const fileName = `${Date.now()}.${ext}`;
+  const filePath = path.join(folderPath, fileName);
+
+  fs.writeFileSync(filePath, buffer); // save the file to the uploads folder
+
+  return filePath; // return the file path for saving in the database
+};
 
 
 
@@ -105,7 +141,7 @@ const sendPasswordOTP = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, batchYear,yearTo, mobileNumber, reference } = req.body;
+    const { name, batchYear, yearTo, mobileNumber, reference } = req.body;
 
     // Validate mobile number
     const mobileNumberRegex = /^[6-9]\d{9}$/;
@@ -127,7 +163,7 @@ const registerUser = async (req, res) => {
       const result = await sequelize.query(
         'INSERT INTO register (name, batchYear, yearTo, mobileNumber, reference) VALUES (?, ?, ?, ?, ?)',
         {
-          replacements: [name, batchYear,yearTo, mobileNumber, reference],
+          replacements: [name, batchYear, yearTo, mobileNumber, reference],
           type: QueryTypes.INSERT
         }
       );
@@ -285,7 +321,7 @@ const updateUserType = async (req, res) => {
 
     userStatus = "1";
 
-    if(type == "Business"){
+    if (type == "Business") {
       userStatus = "1";
     } else {
       userStatus = "1";
@@ -294,7 +330,7 @@ const updateUserType = async (req, res) => {
     await sequelize.query(
       'UPDATE register SET type = ?,status = ? WHERE id = ?',
       {
-        replacements: [type,userStatus, userId],
+        replacements: [type, userStatus, userId],
         type: sequelize.QueryTypes.UPDATE
       }
     );
@@ -308,7 +344,7 @@ const updateUserType = async (req, res) => {
 
 const createUserProfile = async (req, res) => {
   try {
-    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown } = req.body;
+    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address, homeTown } = req.body;
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -330,12 +366,25 @@ const createUserProfile = async (req, res) => {
       console.log("Personal Profile already exists for user ID:", userId);
       return res.status(400).json({ error: true, message: 'Personal Profile already exists' });
     }
-
+    let imagePathProfile = '';
+    let imagePathCover = '';
+    if (!profile) {
+      imagePathProfile = "";
+    } else {
+      const imageconcateprofile = 'data:image/png;base64,' + profile;
+      imagePathProfile = saveBase64Image(imageconcateprofile, 'uploads');
+    }
+    if (!cover) {
+      imagePathCover = "";
+    } else {
+      const imageconcatecover = 'data:image/png;base64,' + cover;
+      imagePathCover = saveBase64Image(imageconcatecover, 'uploads');
+    }
     // Create new profile
     await sequelize.query(
       'INSERT INTO personal_profile (user_id, email, qualification, qAddress, occupation, oAddress, employment, about, profile, cover, address,homeTown) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       {
-        replacements: [userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown],
+        replacements: [userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address, homeTown],
         type: QueryTypes.INSERT
       }
     );
@@ -354,7 +403,7 @@ const createUserProfile = async (req, res) => {
 
 const updateUserPersonalProfile = async (req, res) => {
   try {
-    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown } = req.body;
+    const { userId, email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address, homeTown } = req.body;
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -376,11 +425,33 @@ const updateUserPersonalProfile = async (req, res) => {
       return res.status(404).json({ error: true, message: 'Personal Profile does not exist' });
     }
 
+    console.log(profile);
+    console.log("Invalid profile");
+    console.log(cover);
+    console.log("Invalid cover");
+
+    let imagePathProfile = "";
+    let imagePathCover = "";
+    console.log(existingUser[0].profile);
+    console.log(existingUser[0].cover);
+
+    if (!profile) {
+      imagePathProfile = existingUser[0].profile;
+    } else {
+      imagePathProfile = saveBase64Image(profile, 'uploads');
+    }
+
+    if (!cover) {
+      imagePathCover = existingUser[0].cover;
+    } else {
+      imagePathCover = saveBase64Image(cover, 'uploads');
+    }
+
     // Update profile
     await sequelize.query(
       'UPDATE personal_profile SET email = ?, qualification = ?, qAddress = ?, occupation = ?, oAddress = ?, employment = ?, about = ?, profile = ?, cover = ?, address = ?, homeTown = ? WHERE user_id = ?',
       {
-        replacements: [email, qualification, cityQualification, occupation, cityOccupation, employment, about, profile, cover, address,homeTown, userId],
+        replacements: [email, qualification, cityQualification, occupation, cityOccupation, employment, about, imagePathProfile, imagePathCover, address, homeTown, userId],
         type: QueryTypes.UPDATE
       }
     );
@@ -415,11 +486,26 @@ const createBusinessProfile = async (req, res) => {
     );
 
     if (existingUser.length === 0) {
+      let imagePathProfile = '';
+      let imagePathCover = '';
+      if (!profile) {
+        imagePathProfile = "";
+      } else {
+        const imageconcateprofile = 'data:image/png;base64,' + profile;
+        imagePathProfile = saveBase64Image(imageconcateprofile, 'uploads');
+      }
+      if (!cover) {
+        imagePathCover = "";
+      } else {
+        const imageconcatecover = 'data:image/png;base64,' + cover;
+        imagePathCover = saveBase64Image(imageconcatecover, 'uploads');
+      }
+
       const tagsList = _myList.join(',');
       const result = await sequelize.query(
         'INSERT INTO business_profile (user_id,business_name,email,business_type,business_category,description,profile,cover,address,address2,state,city,pincode,homeTwon, tagsList) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         {
-          replacements: [userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, tagsList],
+          replacements: [userId, business_name, email, business_type, business_category, description, imagePathProfile, imagePathCover, address, address2, state, city, pinCode, homeTwon, tagsList],
           type: QueryTypes.INSERT
         }
       );
@@ -437,7 +523,7 @@ const createBusinessProfile = async (req, res) => {
 
 const updateBusinessProfile = async (req, res) => {
   try {
-    const { userId, business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon, _myList  } = req.body;
+    const { userId, business_name, email, business_type, business_category, description, profile, cover, address, address2, state, city, pinCode, homeTwon, _myList } = req.body;
 
     console.log(req.body);
     const existingUser = await sequelize.query(
@@ -450,6 +536,9 @@ const updateBusinessProfile = async (req, res) => {
 
     if (existingUser.length > 0) {
 
+      const imagePathProfile = saveBase64Image(profile, 'uploads');
+
+      const imagePathCover = saveBase64Image(cover, 'uploads');
       const tagsList = _myList.join(',');
 
       await sequelize.query(
@@ -457,7 +546,7 @@ const updateBusinessProfile = async (req, res) => {
          SET business_name = ?, email = ?, business_type = ?, business_category = ?, description = ?, profile = ?,cover = ?,address = ?,address2 = ?,state = ?,city = ?,pinCode = ?,homeTwon = ?,tagsList = ?
          WHERE user_id = ?`,
         {
-          replacements: [business_name, email, business_type, business_category, description, profile, cover, address,address2,state,city,pinCode, homeTwon,tagsList, userId ],
+          replacements: [business_name, email, business_type, business_category, description, imagePathProfile, imagePathCover, address, address2, state, city, pinCode, homeTwon, tagsList, userId],
           type: QueryTypes.UPDATE
         }
       );
@@ -473,11 +562,11 @@ const updateBusinessProfile = async (req, res) => {
 
 const createRequirement = async (req, res) => {
   try {
-    const { userId, title, description,BuySell,SingleMultiple, images, value } = req.body;
+    const { userId, title, description, BuySell, SingleMultiple, images, value } = req.body;
     const result = await sequelize.query(
       'INSERT INTO add_new_requirement (user_id,Title,Description,buy_sell,single_multi	, value) VALUES (?,?,?,?,?,?)',
       {
-        replacements: [userId, title, description,BuySell,SingleMultiple, value],
+        replacements: [userId, title, description, BuySell, SingleMultiple, value],
         type: QueryTypes.INSERT
       }
     );
@@ -488,10 +577,13 @@ const createRequirement = async (req, res) => {
 
         for (let index = 0; index < images.length; index++) {
           const data = images[index];
+          const imageconcate = 'data:image/png;base64,' + data;
+
+          const imagePathProfile = saveBase64Image(imageconcate, 'uploads');
           await sequelize.query(
             'INSERT INTO requirment_photo (requirment_id, photo) VALUES (?, ?)',
             {
-              replacements: [reqId, data],
+              replacements: [reqId, imagePathProfile],
               type: QueryTypes.INSERT
             }
           );
@@ -573,7 +665,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
           type: sequelize.QueryTypes.SELECT
         }
       );
-      
+
       const ratingData = await sequelize.query(
         `SELECT COUNT(*) as total, SUM(rating) as tReview
          FROM requirement_review WHERE r_id = ?`,
@@ -596,7 +688,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     }
 
     const groupedRequirements = requirements.reduce((acc, row) => {
-      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, sellData,totalReview, totalRating, userCount, ...requirementData } = row;
+      const { id, PHID, RIMAGE, userName, userType, savedRequirementId, sellData, totalReview, totalRating, userCount, ...requirementData } = row;
       if (!acc[id]) {
         acc[id] = {
           id, // Include the requirement ID here
@@ -627,6 +719,24 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 };
 
 
+const unFollowUser = async (req, res) => {
+  try {
+    const { reqId } = req.body;
+
+    await sequelize.query(
+      'DELETE FROM user_follower WHERE id = ?',
+      {
+        replacements: [reqId],
+        type: QueryTypes.DELETE,
+      }
+    );
+
+    res.json({ error: false, message: "You have unfollow this user" });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
 
 
 const saveRequirement = async (req, res) => {
@@ -803,18 +913,18 @@ const getAllUserRequirements = async (req, res) => {
 
 
 
+
 const getAllUsers = async (req, res) => {
   try {
     // const userId = req.user.id;
     const { userId } = req.body;
     const users = await sequelize.query(
-      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND r.status = ? AND uf.status != ? WHERE r.id != ?',
+      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ? AND r.status = ?',
       {
-        replacements: [userId, userId, '0','2', userId],
+        replacements: [userId, userId, '2', userId, '0'],
         type: QueryTypes.SELECT
       }
     );
-
     let userCount = 0;
 
     for (let i = 0; i < users.length; i++) {
@@ -822,7 +932,7 @@ const getAllUsers = async (req, res) => {
         userCount++;
       }
 
-      let image,category,tagsList;
+      let image, category, tagsList;
       if (users[i].type === 'Business') {
         // Fetch image from business table
         const businessImage = await sequelize.query(
@@ -873,6 +983,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 const getFollowAllUsers = async (req, res) => {
@@ -995,7 +1106,7 @@ const sendFollowRequest = async (req, res) => {
     const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
     const currentDate = new Date();
 
-    if(userPlan[0].type == "Personal"){
+    if (userPlan[0].type == "Personal") {
       if (existingUser.length === 0 && existingUser1.length === 0) {
         const result = await sequelize.query(
           'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
@@ -1008,13 +1119,13 @@ const sendFollowRequest = async (req, res) => {
       } else {
         res.status(400).json({ error: true, message: 'Request already exist' });
       }
-    }else{
+    } else {
       if (currentDate > subscriptionEndDate) {
         res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
       } else {
-  
-        if(userPlan[0].subscriptionPlan == "Silver"){
-          if(totalRequests[0].total < 10){
+
+        if (userPlan[0].subscriptionPlan == "Silver") {
+          if (totalRequests[0].total < 10) {
             if (existingUser.length === 0 && existingUser1.length === 0) {
               const result = await sequelize.query(
                 'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
@@ -1027,10 +1138,10 @@ const sendFollowRequest = async (req, res) => {
             } else {
               res.status(400).json({ error: true, message: 'Request already exist' });
             }
-          }else{
+          } else {
             res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
           }
-        }else{
+        } else {
           if (existingUser.length === 0 && existingUser1.length === 0) {
             const result = await sequelize.query(
               'INSERT INTO user_follower (user_id,follower_id) VALUES (?, ?)',
@@ -1048,7 +1159,7 @@ const sendFollowRequest = async (req, res) => {
     }
 
     // Check if the subscription is expired
-    
+
   } catch (error) {
     res.status(500).json({ error: true, message: error });
   }
@@ -1279,20 +1390,20 @@ const updatepassword = async (req, res) => {
 //   }
 // };
 const sendMessageRoom = async (req, res) => {
-  try{
-    const { content, senderId, roomId,type } = req.body;
-  console.log(req.body);
+  try {
+    const { content, senderId, roomId, type } = req.body;
+    console.log(req.body);
 
-  await sequelize.query(
-    'INSERT INTO message_room (senderId,roomId, content,type) VALUES (?, ?, ?, ?)',
-    {
-      replacements: [senderId, roomId, content, type],
-      type: sequelize.QueryTypes.INSERT
-    }
-  );
+    await sequelize.query(
+      'INSERT INTO message_room (senderId,roomId, content,type) VALUES (?, ?, ?, ?)',
+      {
+        replacements: [senderId, roomId, content, type],
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
 
-  res.status(200).json({error: false,message: "send success "});
-  }catch (error) {
+    res.status(200).json({ error: false, message: "send success " });
+  } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
@@ -1396,7 +1507,7 @@ const getAllUsersIfFollow = async (req, res) => {
         }
       );
 
-      let image,category;
+      let image, category;
       if (users[i].type === 'Business') {
         // Fetch image from business table
         const businessImage = await sequelize.query(
@@ -1650,7 +1761,7 @@ const getMessages = async (req, res) => {
         // Attach the requirement details to the message
         messages[i].requirement = Object.values(groupedRequirements)[0] || null;
       } else if (messages[i].type === "profileB") {
-        const userId = messages[i].content; 
+        const userId = messages[i].content;
         const users = await sequelize.query(
           'SELECT business_profile.*,register.name AS NAME,register.batchYear as BYEAR,register.yearTo as BYEARTO,register.mobileNumber as PHONE,register.subscriptionPlan as subscriptionPlan, register.subscriptionEndDate as subscriptionEndDate FROM business_profile INNER JOIN register ON business_profile.user_id = register.id WHERE business_profile.user_id = ?',
           {
@@ -1674,10 +1785,10 @@ const getMessages = async (req, res) => {
 
     console.log('Final Messages:', messages); // Log final messages for debugging
 
-    res.status(200).json({ 
-      error: false, 
-      message: "Messages fetched successfully", 
-      messages: messages, 
+    res.status(200).json({
+      error: false,
+      message: "Messages fetched successfully",
+      messages: messages,
     });
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -1692,19 +1803,19 @@ const getMessages = async (req, res) => {
 
 
 const getMessagesRoom = async (req, res) => {
-  try{
+  try {
     const { roomId } = req.body;
 
-  const messages = await sequelize.query(
-    'SELECT mr.*, r.name AS sender_name FROM message_room mr INNER JOIN register r ON mr.senderId = r.id WHERE mr.roomId = ? ORDER BY mr.createdAt DESC',
-    {
-      replacements: [roomId],
-      type: sequelize.QueryTypes.SELECT
-    }
-  );
+    const messages = await sequelize.query(
+      'SELECT mr.*, r.name AS sender_name FROM message_room mr INNER JOIN register r ON mr.senderId = r.id WHERE mr.roomId = ? ORDER BY mr.createdAt DESC',
+      {
+        replacements: [roomId],
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-  res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
-  }catch (error) {
+    res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
+  } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
@@ -1862,7 +1973,7 @@ const deleteRequirement = async (req, res) => {
 const updateRequirementStatus = async (req, res) => {
   try {
     const { requirementId } = req.body;
-    if (!requirementId ) {
+    if (!requirementId) {
       return res.status(400).json({ message: 'Requirement ID and status are required', error: true });
     }
 
@@ -1953,18 +2064,18 @@ const clickSellIt = async (req, res) => {
 
 
 const getClickSellIt = async (req, res) => {
-  try{
-    const {  	user_id, requirement_user_id } = req.body;
+  try {
+    const { user_id, requirement_user_id } = req.body;
 
     const messages = await sequelize.query(
       'SELECT * FROM sell_it_data WHERE requirement_user_id = ?  AND user_id = ?',
       {
-        replacements: [requirement_user_id ,user_id],
+        replacements: [requirement_user_id, user_id],
         type: sequelize.QueryTypes.SELECT
       }
     );
 
-    res.status(200).json({error: false,message: "Message Fetch Successfully",messages: messages});
+    res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
   } catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
@@ -2013,10 +2124,13 @@ const getUserToken = async (req, res) => {
 
 const createStory = async (req, res) => {
   try {
-    const {userId, profile, time} = req.body;
+    const { userId, profile, time } = req.body;
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const imageconcatecover = 'data:image/png;base64,' + profile;
+    imagePathCover = saveBase64Image(imageconcatecover, 'uploads');
 
     const totalStory = await sequelize.query(
       'SELECT COUNT(*) as total FROM ads_photo WHERE user_id = ? AND created_at >= ? AND status = ?',
@@ -2044,11 +2158,11 @@ const createStory = async (req, res) => {
     if (currentDate > subscriptionEndDate) {
       res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
     } else {
-      if(userPlan[0].subscriptionPlan == "Silver"){
+      if (userPlan[0].subscriptionPlan == "Silver") {
         const result = await sequelize.query(
           'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
           {
-            replacements: [userId,  profile, time],
+            replacements: [userId, imagePathCover, time],
             type: QueryTypes.INSERT
           }
         );
@@ -2056,11 +2170,11 @@ const createStory = async (req, res) => {
         // await sendOTP(mobileNumber);
         res.status(200).json({ error: false, message: 'Stroy create successfully' });
       } else {
-        if(totalStory[0].total < 5){
+        if (totalStory[0].total < 5) {
           const result = await sequelize.query(
             'INSERT INTO ads_photo (user_id,photo,story_time) VALUES (?, ?, ?)',
             {
-              replacements: [userId,  profile, time],
+              replacements: [userId, imagePathCover, time],
               type: QueryTypes.INSERT
             }
           );
@@ -2073,7 +2187,7 @@ const createStory = async (req, res) => {
       }
     }
 
-    
+
 
   } catch (error) {
     res.status(500).json({ error: true, message: error });
@@ -2201,8 +2315,6 @@ const loginUserAdmin = async (req, res) => {
 //     res.status(500).json({ error: 'Internal server error' });
 //   }
 // };
-
-
 const fetchUsersForAdmin = async (req, res) => {
   try {
     // Fetch all users with type 'Business'
@@ -2228,6 +2340,8 @@ const fetchUsersForAdmin = async (req, res) => {
       }
     );
 
+    
+
     for (const user of users) {
       // Fetch profile data for Business type users
       const profileData = await sequelize.query(
@@ -2238,10 +2352,26 @@ const fetchUsersForAdmin = async (req, res) => {
         }
       );
 
+      const checkStoryStatus = await sequelize.query(
+        'SELECT * FROM ads_photo WHERE user_id = ? AND status = ?',
+        {
+          replacements: [user.id,'0'],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      var storyStatus = 0;
+
+      if(checkStoryStatus.length > 0){
+        storyStatus = 0;
+      } else {
+        storyStatus = 1;
+      }
       // Add user and profile data to the userDetails array
       userDetails.push({
         ...user,
-        profile: profileData[0] || null // Assuming profileData is an array
+        profile: profileData[0] || null,
+        storyStatus: storyStatus,
       });
     }
 
@@ -2288,6 +2418,7 @@ const fetchUsersForAdmin = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 
@@ -2374,7 +2505,7 @@ const fetchUsersForAdminPersonal = async (req, res) => {
     const usersTotalCurrentDate = await sequelize.query(
       'SELECT * FROM register WHERE DATE(created_at) = ?',
       {
-        replacements: [ currentDate],
+        replacements: [currentDate],
         type: QueryTypes.SELECT
       }
     );
@@ -2508,50 +2639,142 @@ const fetchUserRequirementsLetter = async (req, res) => {
 
 
 const fetchRequirementDetails = async (req, res) => {
-  try {
-    const { requirementId } = req.body;
 
-    // Validate the requirement ID
-    const requirement = await sequelize.query(
-      'SELECT * FROM add_new_requirement WHERE id = ?',
+  try {
+
+    const { userId } = req.body;
+
+
+
+    const requirements = await sequelize.query(
+
+      'SELECT add_new_requirement.*, requirment_photo.id AS PHID, requirment_photo.photo AS RIMAGE FROM add_new_requirement LEFT JOIN requirment_photo ON add_new_requirement.id = requirment_photo.requirment_id WHERE add_new_requirement.id = ?',
+
       {
-        replacements: [requirementId],
-        type: QueryTypes.SELECT
+
+        replacements: [userId],
+
+        type: QueryTypes.SELECT,
+
       }
+
     );
 
-    if (requirement.length === 0) {
-      return res.status(404).json({ message: 'Requirement ID not found', error: true });
+
+
+    for (let i = 0; i < requirements.length; i++) {
+
+      const sellDataWithUser = await sequelize.query(
+
+        `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
+
+         FROM sell_it_data sid
+
+         JOIN register r ON sid.user_id = r.id
+
+         WHERE sid.requirement_id = ?`,
+
+        {
+
+          replacements: [requirements[i].id],
+
+          type: QueryTypes.SELECT,
+
+        }
+
+      );
+
+
+
+      const ratingData = await sequelize.query(
+
+        `SELECT COUNT(*) as total, SUM(rating) as tReview
+
+         FROM requirement_review WHERE r_id = ?`,
+
+        {
+
+          replacements: [requirements[i].id],
+
+          type: QueryTypes.SELECT,
+
+        }
+
+      );
+
+
+
+      const totalReview = ratingData[0]?.total || 0;
+
+      const totalRating = ratingData[0]?.tReview || 0;
+
+
+
+      requirements[i].sellData = sellDataWithUser;
+
+      requirements[i].totalReview = totalReview;
+
+      requirements[i].totalRating = totalRating;
+
+      requirements[i].userCount = sellDataWithUser.length;
+
     }
 
-    // Fetch data from sell_it_data table and the associated user name from the register table
-    const sellDataWithUser = await sequelize.query(
-      `SELECT sid.*, r.name as name, r.mobileNumber, r.type, r.batchYear
-       FROM sell_it_data sid
-       JOIN register r ON sid.user_id = r.id
-       WHERE sid.requirement_id = ?`,
-      {
-        replacements: [requirementId],
-        type: QueryTypes.SELECT
+
+
+    const groupedRequirements = requirements.reduce((acc, row) => {
+
+      const { id, PHID, RIMAGE, sellData, totalReview, totalRating, userCount, ...requirementData } = row;
+
+      if (!acc[id]) {
+
+        acc[id] = {
+
+          id, // Include the requirement ID here
+
+          ...requirementData,
+
+          images: [],
+
+          sellData: sellData || [],
+
+          totalReview: totalReview || 0,
+
+          totalRating: totalRating || 0,
+
+          userCount: userCount || 0, // Attach user count
+
+        };
+
       }
-    );
 
-    const sellDataCount = sellDataWithUser.length;
+      if (PHID) {
 
-    res.status(200).json({
-      requirement: requirement[0],
-      totalRequirements: requirementCount[0].count,
-      totalSellData: sellDataCount,
-      sellData: sellDataWithUser,
-      error: false
-    });
+        acc[id].images.push({ id: PHID, url: RIMAGE });
+
+      }
+
+      return acc;
+
+    }, {});
+
+
+
+    const resultArray = Object.values(groupedRequirements);
+
+
+
+    res.status(200).json({ error: false, message: "Requirment Fetch", allRequirment: resultArray });
+
   } catch (error) {
-    console.error('Error fetching requirement details:', error);
+
+    console.error('Error fetching user profile:', error);
+
     res.status(500).json({ message: 'Internal server error', error: true });
+
   }
+
 };
-
-
 
 const fetchUsersTotalCountAll = async (req, res) => {
   try {
@@ -2599,7 +2822,7 @@ const fetchUsersTotalCountAll = async (req, res) => {
     const totalServicesToday = await sequelize.query(
       'SELECT * FROM add_new_productservice WHERE Type = ? AND  createdAt = ?',
       {
-        replacements: ['Service',currentDate],
+        replacements: ['Service', currentDate],
         type: QueryTypes.SELECT
       }
     );
@@ -2639,7 +2862,7 @@ const fetchUsersTotalCountAll = async (req, res) => {
     const totalProductToday = totalProductsToday.length;
 
     // Send response with user details
-    res.status(200).json({ error: false, totalService, totalServiceToday, totalProduct, totalProductToday, totalRequirement,totalRequirementToday ,totalRequirementComplated,totalRequirementComplatedToday,totalRequirementLetter, });
+    res.status(200).json({ error: false, totalService, totalServiceToday, totalProduct, totalProductToday, totalRequirement, totalRequirementToday, totalRequirementComplated, totalRequirementComplatedToday, totalRequirementLetter, });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
@@ -2713,7 +2936,7 @@ const getUserPlan = async (req, res) => {
 
 const verifyBusinessProfile = async (req, res) => {
   try {
-    const { userId,status } = req.body;
+    const { userId, status } = req.body;
     await sequelize.query(
       'UPDATE register SET status = ? WHERE id = ?',
       {
@@ -2749,7 +2972,7 @@ const getUserStorybyId = async (req, res) => {
 
 const verifyStory = async (req, res) => {
   try {
-    const { storyId,status } = req.body;
+    const { storyId, status } = req.body;
     await sequelize.query(
       'UPDATE ads_photo SET status = ? WHERE id = ?',
       {
@@ -2767,7 +2990,7 @@ const verifyStory = async (req, res) => {
 
 const updateGroupName = async (req, res) => {
   try {
-    const { roomId,userId,name } = req.body;
+    const { roomId, userId, name } = req.body;
     await sequelize.query(
       'UPDATE rooms SET g_name = ? WHERE id = ? AND user_id = ?',
       {
@@ -2843,8 +3066,8 @@ const createProduct = async (req, res) => {
     if (currentDate > subscriptionEndDate) {
       res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
     } else {
-      if(userPlan[0].subscriptionPlan == "Silver"){
-        if(totalProducts[0].total < 5){
+      if (userPlan[0].subscriptionPlan == "Silver") {
+        if (totalProducts[0].total < 5) {
           const result = await sequelize.query(
             'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
             {
@@ -2852,11 +3075,11 @@ const createProduct = async (req, res) => {
               type: QueryTypes.INSERT
             }
           );
-      
+
           if (result && result[0] != null) {
             const reqId = result[0];
             if (Array.isArray(images)) {
-      
+
               for (let index = 0; index < images.length; index++) {
                 const data = images[index];
                 await sequelize.query(
@@ -2867,7 +3090,7 @@ const createProduct = async (req, res) => {
                   }
                 );
               }
-      
+
               res.status(200).json({ message: 'product created!', error: false });
             }
           } else {
@@ -2877,7 +3100,7 @@ const createProduct = async (req, res) => {
           res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
         }
       } else {
-        if(totalProducts[0].total < 25){
+        if (totalProducts[0].total < 25) {
           const result = await sequelize.query(
             'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
             {
@@ -2885,11 +3108,11 @@ const createProduct = async (req, res) => {
               type: QueryTypes.INSERT
             }
           );
-      
+
           if (result && result[0] != null) {
             const reqId = result[0];
             if (Array.isArray(images)) {
-      
+
               for (let index = 0; index < images.length; index++) {
                 const data = images[index];
                 await sequelize.query(
@@ -2900,7 +3123,7 @@ const createProduct = async (req, res) => {
                   }
                 );
               }
-      
+
               res.status(200).json({ message: 'product created!', error: false });
             }
           } else {
@@ -3024,30 +3247,43 @@ const updateRequirement = async (req, res) => {
       }
     );
 
-      if (Array.isArray(images)) {
-        // Delete existing photos for the requirement
+    if (Array.isArray(images)) {
+      // Delete existing photos for the requirement
+      await sequelize.query(
+        'DELETE FROM requirment_photo WHERE requirment_id = ?',
+        {
+          replacements: [requirementId],
+          type: QueryTypes.DELETE
+        }
+      );
+
+      // Insert new photos for the requirement
+      for (let index = 0; index < images.length; index++) {
+        const data = images[index];
+        let imagePathProfile = '';
+
+        if (data.includes('uploads')) {
+
+          imagePathProfile = data;
+
+        } else {
+
+          const imageconcate = 'data:image/png;base64,' + data;
+
+          imagePathProfile = saveBase64Image(imageconcate, 'uploads');
+
+        }
         await sequelize.query(
-          'DELETE FROM requirment_photo WHERE requirment_id = ?',
+          'INSERT INTO requirment_photo (requirment_id, photo) VALUES (?, ?)',
           {
-            replacements: [requirementId],
-            type: QueryTypes.DELETE
+            replacements: [requirementId, imagePathProfile],
+            type: QueryTypes.INSERT
           }
         );
-
-        // Insert new photos for the requirement
-        for (let index = 0; index < images.length; index++) {
-          const data = images[index];
-          await sequelize.query(
-            'INSERT INTO requirment_photo (requirment_id, photo) VALUES (?, ?)',
-            {
-              replacements: [requirementId, data],
-              type: QueryTypes.INSERT
-            }
-          );
-        }
       }
+    }
 
-      res.status(200).json({ message: 'Requirement updated successfully!', error: false });
+    res.status(200).json({ message: 'Requirement updated successfully!', error: false });
     // } else {
     //   res.status(404).json({ message: 'Requirement not found or could not be updated', error: true });
     // }
@@ -3059,14 +3295,14 @@ const updateRequirement = async (req, res) => {
 
 const addReviews = async (req, res) => {
   try {
-    const { user_id, requirement_id,review,rating } = req.body;
+    const { user_id, requirement_id, review, rating } = req.body;
     console.log(req.body);
 
     // Check if the requirement_id already exists
     const [existingEntry] = await sequelize.query(
       'SELECT * FROM requirement_review WHERE r_id = ? AND u_id = ?',
       {
-        replacements: [requirement_id,user_id],
+        replacements: [requirement_id, user_id],
         type: sequelize.QueryTypes.SELECT,
       }
     );
@@ -3079,7 +3315,7 @@ const addReviews = async (req, res) => {
     await sequelize.query(
       'INSERT INTO requirement_review (r_id, u_id, review,rating) VALUES (?, ?, ?, ?)',
       {
-        replacements: [requirement_id, user_id, review,rating],
+        replacements: [requirement_id, user_id, review, rating],
         type: sequelize.QueryTypes.INSERT,
       }
     );
@@ -3134,48 +3370,111 @@ const generateQRCode = async (req, res) => {
   }
 };
 
-
-
-const unFollowUser = async (req, res) => {
+const addCareer = async (req, res) => {
   try {
-    const { reqId } = req.body;
+    const { userId, name, mobile, resume } = req.body;
+    console.log(req.body);
+
+    // await sequelize.query("SET SESSION max_allowed_packet=67108864");
+
     await sequelize.query(
-      'DELETE FROM user_follower WHERE id = ?',
+      'INSERT INTO career (user_id, name, mobile,resume) VALUES (?, ?, ?, ?)',
       {
-        replacements: [reqId],
-        type: QueryTypes.DELETE,
+        replacements: [userId, name, mobile, resume],
+        type: sequelize.QueryTypes.INSERT,
       }
     );
-    res.json({ error: false, message: "You have unfollow this user" });
 
+    res.status(200).json({ error: false, message: "Add successfully" });
   } catch (error) {
-    console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
-  }
-};
-
-const addCareer = async (req, res) => {
-  try{
-    const { userId, name, mobile,resume } = req.body;
-  console.log(req.body);
-
-  // await sequelize.query("SET SESSION max_allowed_packet=67108864");
-
-  await sequelize.query(
-    'INSERT INTO career (user_id, name, mobile,resume) VALUES (?, ?, ?, ?)',
-    {
-      replacements: [userId, name, mobile,resume],
-      type: sequelize.QueryTypes.INSERT,
-    }
-  );
-
-  res.status(200).json({error: false,message: "Add successfully"});
-  }catch (error) {
     console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 }
 
+
+const getAllUsersTest = async (req, res) => {
+  try {
+    const { userId, limit, offset } = req.body;
+
+    // Ensure limit and offset are numbers
+    const limitValue = parseInt(limit, 10) || 10; // default to 10 if not provided
+    const offsetValue = parseInt(offset, 10) || 0; // default to 0 if not provided
+
+    const users = await sequelize.query(
+      `SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS 
+       FROM register r 
+       LEFT JOIN user_follower uf 
+       ON (r.id = uf.user_id AND uf.follower_id = ?) 
+       OR (r.id = uf.follower_id AND uf.user_id = ?) 
+       AND r.status = ? 
+       AND uf.status != ? 
+       WHERE r.id != ? 
+       LIMIT ? OFFSET ?`,
+      {
+        replacements: [userId, userId, '0', '2', userId, limitValue, offsetValue],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    let userCount = 0;
+
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].FSTATUS === '0') {
+        userCount++;
+      }
+
+      let image, category, tagsList, state, city, pincode, homeTwon;
+      if (users[i].type === 'Business') {
+        // Fetch image from business table
+        const businessImage = await sequelize.query(
+          'SELECT business_category, profile, tagsList, state, city, pincode, homeTwon FROM business_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: QueryTypes.SELECT
+          }
+        );
+        image = businessImage.length > 0 ? businessImage[0].profile : null;
+        category = businessImage.length > 0 ? businessImage[0].business_category : null;
+        tagsList = businessImage.length > 0 ? businessImage[0].tagsList : null;
+        state = businessImage.length > 0 ? businessImage[0].state : null;
+        city = businessImage.length > 0 ? businessImage[0].city : null;
+        pincode = businessImage.length > 0 ? businessImage[0].pincode : null;
+        homeTwon = businessImage.length > 0 ? businessImage[0].homeTwon : null;
+      } else if (users[i].type === 'Personal') {
+        // Fetch image from personal table
+        const personalImage = await sequelize.query(
+          'SELECT profile FROM personal_profile WHERE user_id = ?',
+          {
+            replacements: [users[i].id],
+            type: QueryTypes.SELECT
+          }
+        );
+        image = personalImage.length > 0 ? personalImage[0].profile : null;
+        category = null;
+        tagsList = null;
+        state = null;
+        city = null;
+        pincode = null;
+        homeTwon = null;
+      }
+
+      users[i].image = image;
+      users[i].category = category;
+      users[i].tagsList = tagsList;
+      users[i].state = state;
+      users[i].city = city;
+      users[i].pincode = pincode;
+      users[i].homeTwon = homeTwon;
+    }
+
+    console.log(userCount);
+    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 module.exports = {
   registerUser,
@@ -3195,6 +3494,7 @@ module.exports = {
   updateRequirement,
   updateUserType,
   createUserProfile,
+  getAllUsersTest,
   createBusinessProfile,
   createStory,
   createRoom,
