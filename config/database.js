@@ -14,6 +14,11 @@ require('dotenv').config();
 //   dialect: 'mysql',
 // });
 
+// const DB_NAME = 'sbo_new';
+// const DB_USER = 'root';
+// const DB_PASSWORD = '';
+// const DB_HOST = 'localhost';
+
 
 const DB_NAME = 'apisboorg_sbo_new';
 const DB_USER = 'apisboorg_sbo';
