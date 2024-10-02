@@ -2428,7 +2428,7 @@ const fetchUserProfile = async (req, res) => {
 
     // Fetch user details
     const user = await sequelize.query(
-      'SELECT id, name, batchYear,yearTo, reference, mobileNumber,subscriptionPlan,subscriptionStartDate,subscriptionEndDate, type,status FROM register WHERE id = ?',
+      'SELECT id, name, bCat, batchYear,yearTo, reference, mobileNumber,subscriptionPlan,subscriptionStartDate,subscriptionEndDate, type,status FROM register WHERE id = ?',
       {
         replacements: [userId],
         type: QueryTypes.SELECT
