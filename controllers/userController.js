@@ -3531,6 +3531,70 @@ const getAllUsersTest = async (req, res) => {
   }
 };
 
+
+const deleteAccount = async (req, res) => {
+  try {
+    // Extract the userId from the request body
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: true, message: 'User ID is required' });
+    }
+
+    // Check if the user exists and get the account type (Personal or Business)
+    const user = await sequelize.query(
+      'SELECT * FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({ error: true, message: 'User not found' });
+    }
+
+    const accountType = user[0].type; // Assumes the `type` column holds the account type (Personal or Business)
+
+    // Delete from personal or business account based on account type
+    if (accountType === 'Personal') {
+      await sequelize.query(
+        'DELETE FROM personal_profile WHERE user_id = ?',
+        {
+          replacements: [userId],
+          type: QueryTypes.DELETE
+        }
+      );
+    } else if (accountType === 'Business') {
+      await sequelize.query(
+        'DELETE FROM business_profile WHERE user_id = ?',
+        {
+          replacements: [userId],
+          type: QueryTypes.DELETE
+        }
+      );
+    }
+
+    // Delete the user from the register table
+    await sequelize.query(
+      'DELETE FROM register WHERE id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.DELETE
+      }
+    );
+
+    // Return success message
+    res.status(200).json({
+      error: false,
+      message: 'User account and associated records deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user account:', error);
+    res.status(500).json({ error: true, message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -3606,5 +3670,6 @@ module.exports = {
   getOwnUserStory,
   deleteUserStory,
   addCareer,
+  deleteAccount,
   unFollowUser
 };

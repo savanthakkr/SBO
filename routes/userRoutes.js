@@ -6,7 +6,7 @@ const { verifyToken } = require("../middlewares/roleMiddleware");
 const {getAllUsersTest,unFollowUser,addCareer,generateQRCode,deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,getUserStorybyId,addReviews,getUserReviews,getOwnUserStory,deleteUserStory,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
-    getAllUsers,getRegisterCount,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
+    getAllUsers,getRegisterCount,getAllUserRequirementsUserFollo,deleteAccount,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
 
 // admin api 
@@ -14,6 +14,7 @@ const {getAllUsersTest,unFollowUser,addCareer,generateQRCode,deleteImageProductS
 router.post('/users/loginUserAdmin', loginUserAdmin);
 router.post('/users/getAllUsersTest', getAllUsersTest);
 router.post('/users/addCareer', addCareer);
+router.post('/users/deleteAccount', deleteAccount);
 router.post('/users/unFollowUser', unFollowUser);
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/getRegisterCount', getRegisterCount);
