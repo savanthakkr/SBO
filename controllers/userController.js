@@ -533,12 +533,19 @@ const updateBusinessProfile = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
+    const imagePathProfile = "";
+    const imagePathCover = "";
 
     if (existingUser.length > 0) {
 
-      const imagePathProfile = saveBase64Image(profile, 'uploads');
+      if(profile == null && cover == null){
+        imagePathProfile = existingUser[0].profile;
+        imagePathCover = existingUser[0].cover;
+      }else{
+         imagePathProfile = saveBase64Image(profile, 'uploads');
 
-      const imagePathCover = saveBase64Image(cover, 'uploads');
+         imagePathCover = saveBase64Image(cover, 'uploads');
+      }
       const tagsList = _myList.join(',');
 
       await sequelize.query(
