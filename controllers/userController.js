@@ -973,7 +973,7 @@ const getAllUsers = async (req, res) => {
       users[i].state = state;
       users[i].city = city;
       users[i].pincode = pincode;
-      users[i].homeTwon = tagsList;
+      users[i].homeTwon = homeTown;
     }
     console.log(userCount);
 
