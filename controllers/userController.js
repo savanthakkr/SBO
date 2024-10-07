@@ -1058,50 +1058,55 @@ const getBusinessProfile = async (req, res) => {
 
 const getRegisterCount = async (req, res) => {
   try {
-    // Query to get the count of records by subscriptionPlan
-    const registerCount = await sequelize.query(
-      `SELECT 
-        subscriptionPlan, 
-        COUNT(*) as total 
-      FROM 
-        register 
-      GROUP BY subscriptionPlan`,
+    // Query to get total count of records by subscriptionPlan
+    const totalFreeUsers = await sequelize.query(
+      'SELECT * FROM register WHERE subscriptionPlan = ?',
       {
-        type: QueryTypes.SELECT,
+        replacements: ['Free'],
+        type: QueryTypes.SELECT
       }
     );
 
-    // Construct the custom response object with totals as strings
-    const response = {
-      FreeTotaluser: "0",
-      SilverTotaluser: "0",
-      GoldTotaluser: "0",
-      BlankTotaluser: "0", // For null or empty subscriptionPlan
-    };
-
-    // Loop through the result and assign the total to the appropriate title
-    registerCount.forEach((entry) => {
-      const totalAsString = entry.total.toString(); // Convert total to string
-
-      if (entry.subscriptionPlan === 'Free') {
-        response.FreeTotaluser = totalAsString;
-      } else if (entry.subscriptionPlan === 'Silver') {
-        response.SilverTotaluser = totalAsString;
-      } else if (entry.subscriptionPlan === 'Gold') {
-        response.GoldTotaluser = totalAsString;
-      } else {
-        response.BlankTotaluser = totalAsString; // For null or other subscriptionPlans
+    const totalGoldUsers = await sequelize.query(
+      'SELECT * FROM register WHERE subscriptionPlan = ?',
+      {
+        replacements: ['Gold'],
+        type: QueryTypes.SELECT
       }
-    });
+    );
 
+    const totalSilverUsers = await sequelize.query(
+      'SELECT * FROM register WHERE subscriptionPlan = ?',
+      {
+        replacements: ['Silver'],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    const totalBlankUsers = await sequelize.query(
+      'SELECT * FROM register WHERE subscriptionPlan IS NULL',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Calculate the totals
+    const FreeTotaluser = totalFreeUsers.length.toString(); // Convert count to string
+    const GoldTotaluser = totalGoldUsers.length.toString();
+    const SilverTotaluser = totalSilverUsers.length.toString();
+    const BlankTotaluser = totalBlankUsers.length.toString();
+
+    // Send response with counts in the desired format
     res.status(200).json({
       error: false,
-      message: "Register counts fetched successfully",
-      data: response,
+      FreeTotaluser,
+      GoldTotaluser,
+      SilverTotaluser,
+      BlankTotaluser,
     });
   } catch (error) {
     console.error('Error fetching register counts:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
