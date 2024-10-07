@@ -533,8 +533,8 @@ const updateBusinessProfile = async (req, res) => {
         type: QueryTypes.SELECT
       }
     );
-    const imagePathProfile = "";
-    const imagePathCover = "";
+    let imagePathProfile = "";
+    let imagePathCover = "";
 
     if (existingUser.length > 0) {
 
