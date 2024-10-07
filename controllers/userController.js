@@ -538,7 +538,7 @@ const updateBusinessProfile = async (req, res) => {
 
     if (existingUser.length > 0) {
 
-      if(profile == null && cover == null){
+      if(!profile && !cover){
         imagePathProfile = existingUser[0].profile;
         imagePathCover = existingUser[0].cover;
       }else{
