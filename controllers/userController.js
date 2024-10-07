@@ -141,7 +141,7 @@ const sendPasswordOTP = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name,bCat, batchYear, yearTo, mobileNumber, reference } = req.body;
+    const { name, bCat, batchYear, yearTo, mobileNumber, reference } = req.body;
 
     // Validate mobile number
     const mobileNumberRegex = /^[6-9]\d{9}$/;
@@ -163,7 +163,7 @@ const registerUser = async (req, res) => {
       const result = await sequelize.query(
         'INSERT INTO register (name,bCat, batchYear, yearTo, mobileNumber, reference) VALUES (?,?, ?, ?, ?, ?)',
         {
-          replacements: [name,bCat, batchYear, yearTo, mobileNumber, reference],
+          replacements: [name, bCat, batchYear, yearTo, mobileNumber, reference],
           type: QueryTypes.INSERT
         }
       );
@@ -538,13 +538,23 @@ const updateBusinessProfile = async (req, res) => {
 
     if (existingUser.length > 0) {
 
-      if(!profile && !cover){
+      if (!profile && !cover) {
+        // If both are null, use existing user's images
         imagePathProfile = existingUser[0].profile;
         imagePathCover = existingUser[0].cover;
-      }else{
-         imagePathProfile = saveBase64Image(profile, 'uploads');
+      } else {
+        // If either or both are provided, save the new images
+        if (profile) {
+          imagePathProfile = saveBase64Image(profile, 'uploads');
+        } else {
+          imagePathProfile = existingUser[0].profile; // Use existing if profile is not provided
+        }
 
-         imagePathCover = saveBase64Image(cover, 'uploads');
+        if (cover) {
+          imagePathCover = saveBase64Image(cover, 'uploads');
+        } else {
+          imagePathCover = existingUser[0].cover; // Use existing if cover is not provided
+        }
       }
       const tagsList = _myList.join(',');
 
@@ -2402,7 +2412,7 @@ const fetchUsersForAdmin = async (req, res) => {
       }
     );
 
-    
+
 
     for (const user of users) {
       // Fetch profile data for Business type users
@@ -2417,14 +2427,14 @@ const fetchUsersForAdmin = async (req, res) => {
       const checkStoryStatus = await sequelize.query(
         'SELECT * FROM ads_photo WHERE user_id = ? AND status = ?',
         {
-          replacements: [user.id,'0'],
+          replacements: [user.id, '0'],
           type: QueryTypes.SELECT
         }
       );
 
       var storyStatus = 0;
 
-      if(checkStoryStatus.length > 0){
+      if (checkStoryStatus.length > 0) {
         storyStatus = 0;
       } else {
         storyStatus = 1;
@@ -2474,7 +2484,7 @@ const fetchUsersForAdmin = async (req, res) => {
 
 
     // Send response with user details and total count
-    res.status(200).json({ error: false, totalUsers, topUsers: userComplatedReq , totalUsersCurrentDate, users: userDetails });
+    res.status(200).json({ error: false, totalUsers, topUsers: userComplatedReq, totalUsersCurrentDate, users: userDetails });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
