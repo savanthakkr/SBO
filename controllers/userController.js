@@ -1071,24 +1071,26 @@ const getRegisterCount = async (req, res) => {
       }
     );
 
-    // Construct the custom response object
+    // Construct the custom response object with totals as strings
     const response = {
-      FreeTotaluser: 0,
-      SilverTotaluser: 0,
-      GoldTotaluser: 0,
-      BlankTotaluser: 0, // For null or empty subscriptionPlan
+      FreeTotaluser: "0",
+      SilverTotaluser: "0",
+      GoldTotaluser: "0",
+      BlankTotaluser: "0", // For null or empty subscriptionPlan
     };
 
     // Loop through the result and assign the total to the appropriate title
     registerCount.forEach((entry) => {
+      const totalAsString = entry.total.toString(); // Convert total to string
+
       if (entry.subscriptionPlan === 'Free') {
-        response.FreeTotaluser = entry.total;
+        response.FreeTotaluser = totalAsString;
       } else if (entry.subscriptionPlan === 'Silver') {
-        response.SilverTotaluser = entry.total;
+        response.SilverTotaluser = totalAsString;
       } else if (entry.subscriptionPlan === 'Gold') {
-        response.GoldTotaluser = entry.total;
+        response.GoldTotaluser = totalAsString;
       } else {
-        response.BlankTotaluser = entry.total; // For null or other subscriptionPlans
+        response.BlankTotaluser = totalAsString; // For null or other subscriptionPlans
       }
     });
 
