@@ -973,7 +973,7 @@ const getAllUsers = async (req, res) => {
       users[i].state = state;
       users[i].city = city;
       users[i].pincode = pincode;
-      users[i].homeTwon = homeTown;
+      users[i].homeTwon = homeTwon;
     }
     console.log(userCount);
 
@@ -1052,6 +1052,33 @@ const getBusinessProfile = async (req, res) => {
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
+
+
+const getRegisterCount = async (req, res) => {
+  try {
+    // Query to get the count of records by type and subscriptionPlan
+    const registerCount = await sequelize.query(
+      `SELECT 
+        subscriptionPlan, 
+        COUNT(*) as total 
+      FROM 
+        register 
+      GROUP BY subscriptionPlan`,
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    res.status(200).json({
+      error: false,
+      message: "Register counts fetched successfully",
+      data: registerCount,
+    });
+  } catch (error) {
+    console.error('Error fetching register counts:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
@@ -3507,6 +3534,7 @@ module.exports = {
   OTPVerifyEmail,
   updatepassword,
   createRequirement,
+  getRegisterCount,
   getAllUsers,
   getAllUserRequirements,
   getPersonalProfile,
