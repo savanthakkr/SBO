@@ -1058,7 +1058,7 @@ const getBusinessProfile = async (req, res) => {
 
 const getRegisterCount = async (req, res) => {
   try {
-    // Query to get the count of records by type and subscriptionPlan
+    // Query to get the count of records by subscriptionPlan
     const registerCount = await sequelize.query(
       `SELECT 
         subscriptionPlan, 
@@ -1071,10 +1071,31 @@ const getRegisterCount = async (req, res) => {
       }
     );
 
+    // Construct the custom response object
+    const response = {
+      FreeTotaluser: 0,
+      SilverTotaluser: 0,
+      GoldTotaluser: 0,
+      BlankTotaluser: 0, // For null or empty subscriptionPlan
+    };
+
+    // Loop through the result and assign the total to the appropriate title
+    registerCount.forEach((entry) => {
+      if (entry.subscriptionPlan === 'Free') {
+        response.FreeTotaluser = entry.total;
+      } else if (entry.subscriptionPlan === 'Silver') {
+        response.SilverTotaluser = entry.total;
+      } else if (entry.subscriptionPlan === 'Gold') {
+        response.GoldTotaluser = entry.total;
+      } else {
+        response.BlankTotaluser = entry.total; // For null or other subscriptionPlans
+      }
+    });
+
     res.status(200).json({
       error: false,
       message: "Register counts fetched successfully",
-      data: registerCount,
+      data: response,
     });
   } catch (error) {
     console.error('Error fetching register counts:', error);
