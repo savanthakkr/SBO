@@ -933,49 +933,63 @@ const getAllUserRequirements = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    // const userId = req.user.id;
     const { userId } = req.body;
+    
     const users = await sequelize.query(
-      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ? AND r.status = ?',
+      `SELECT r.*, 
+              uf.id AS FID, 
+              uf.user_id AS REQID, 
+              uf.follower_id AS FOLLOWERID, 
+              uf.status AS FSTATUS 
+       FROM register r 
+       LEFT JOIN user_follower uf 
+       ON (r.id = uf.user_id AND uf.follower_id = ?) 
+       OR (r.id = uf.follower_id AND uf.user_id = ?) 
+       WHERE r.id != ? 
+       AND r.status = ? 
+       ORDER BY 
+            CASE 
+                WHEN uf.follower_id = ? AND uf.status = '0' THEN 1 -- Users who sent follow request first
+                ELSE 2 -- All others next
+            END`,
       {
-        replacements: [userId, userId, '2', userId, '0'],
+        replacements: [userId, userId, userId, '0', userId],
         type: QueryTypes.SELECT
       }
     );
-    let userCount = 0;
 
+    let userCount = 0;
+    
     for (let i = 0; i < users.length; i++) {
       if (users[i].FSTATUS === '0') {
         userCount++;
       }
 
-      let image, category, tagsList;
+      let image, category, tagsList, state, city, pincode, homeTwon;
       if (users[i].type === 'Business') {
-        // Fetch image from business table
-        const businessImage = await sequelize.query(
-          'SELECT business_category,profile,tagsList,state,city,pincode,homeTwon FROM business_profile WHERE user_id = ?',
+        const businessProfile = await sequelize.query(
+          'SELECT business_category, profile, tagsList, state, city, pincode, homeTwon FROM business_profile WHERE user_id = ?',
           {
             replacements: [users[i].id],
-            type: sequelize.QueryTypes.SELECT
+            type: QueryTypes.SELECT
           }
         );
-        image = businessImage.length > 0 ? businessImage[0].profile : null;
-        category = businessImage.length > 0 ? businessImage[0].business_category : null;
-        tagsList = businessImage.length > 0 ? businessImage[0].tagsList : null;
-        state = businessImage.length > 0 ? businessImage[0].state : null;
-        city = businessImage.length > 0 ? businessImage[0].city : null;
-        pincode = businessImage.length > 0 ? businessImage[0].pincode : null;
-        homeTwon = businessImage.length > 0 ? businessImage[0].homeTwon : null;
+        image = businessProfile.length > 0 ? businessProfile[0].profile : null;
+        category = businessProfile.length > 0 ? businessProfile[0].business_category : null;
+        tagsList = businessProfile.length > 0 ? businessProfile[0].tagsList : null;
+        state = businessProfile.length > 0 ? businessProfile[0].state : null;
+        city = businessProfile.length > 0 ? businessProfile[0].city : null;
+        pincode = businessProfile.length > 0 ? businessProfile[0].pincode : null;
+        homeTwon = businessProfile.length > 0 ? businessProfile[0].homeTwon : null;
       } else if (users[i].type === 'Personal') {
-        // Fetch image from personal table
-        const personalImage = await sequelize.query(
+        const personalProfile = await sequelize.query(
           'SELECT profile FROM personal_profile WHERE user_id = ?',
           {
             replacements: [users[i].id],
-            type: sequelize.QueryTypes.SELECT
+            type: QueryTypes.SELECT
           }
         );
-        image = personalImage.length > 0 ? personalImage[0].profile : null;
+        image = personalProfile.length > 0 ? personalProfile[0].profile : null;
         category = null;
         tagsList = null;
         state = null;
@@ -992,14 +1006,19 @@ const getAllUsers = async (req, res) => {
       users[i].pincode = pincode;
       users[i].homeTwon = homeTwon;
     }
-    console.log(userCount);
 
-    res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
+    res.status(200).json({
+      error: false,
+      message: "User Data Fetched",
+      allUsers: users,
+      userCount: userCount
+    });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
