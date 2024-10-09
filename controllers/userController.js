@@ -933,15 +933,34 @@ const getAllUserRequirements = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    // const userId = req.user.id;
     const { userId } = req.body;
+
+    // Modified query to prioritize incoming follow requests
     const users = await sequelize.query(
-      'SELECT r.*, uf.id AS FID, uf.user_id AS REQID, uf.status AS FSTATUS FROM register r LEFT JOIN user_follower uf ON (r.id = uf.user_id AND uf.follower_id = ?) OR (r.id = uf.follower_id AND uf.user_id = ?) AND uf.status != ? WHERE r.id != ? AND r.status = ?',
+      `SELECT 
+          r.*, 
+          uf.id AS FID, 
+          uf.user_id AS REQID, 
+          uf.follower_id AS FOLLOWERID, 
+          uf.status AS FSTATUS 
+        FROM register r 
+        LEFT JOIN user_follower uf 
+          ON (r.id = uf.user_id AND uf.follower_id = ?) 
+          OR (r.id = uf.follower_id AND uf.user_id = ?) 
+        AND uf.status != ? 
+        WHERE r.id != ? 
+        AND r.status = ? 
+        ORDER BY 
+          CASE 
+            WHEN uf.follower_id = ? AND uf.status = ? THEN 1  -- Incoming follow requests
+            ELSE 2  -- Other users
+          END`,
       {
-        replacements: [userId, userId, '2', userId, '0'],
+        replacements: [userId, userId, '2', userId, '0', userId, '0'], // Assuming '0' represents a follow request status
         type: QueryTypes.SELECT
       }
     );
+
     let userCount = 0;
 
     for (let i = 0; i < users.length; i++) {
@@ -949,7 +968,8 @@ const getAllUsers = async (req, res) => {
         userCount++;
       }
 
-      let image, category, tagsList;
+      let image, category, tagsList, state, city, pincode, homeTwon;
+      
       if (users[i].type === 'Business') {
         // Fetch image from business table
         const businessImage = await sequelize.query(
@@ -984,6 +1004,7 @@ const getAllUsers = async (req, res) => {
         homeTwon = null;
       }
 
+      // Append the fetched details to users array
       users[i].image = image;
       users[i].category = category;
       users[i].tagsList = tagsList;
@@ -992,6 +1013,7 @@ const getAllUsers = async (req, res) => {
       users[i].pincode = pincode;
       users[i].homeTwon = homeTwon;
     }
+
     console.log(userCount);
 
     res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
@@ -1000,6 +1022,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
