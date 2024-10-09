@@ -934,7 +934,7 @@ const getAllUserRequirements = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     const users = await sequelize.query(
       `SELECT r.*, 
               uf.id AS FID, 
@@ -949,7 +949,7 @@ const getAllUsers = async (req, res) => {
        AND r.status = ? 
        ORDER BY 
             CASE 
-                WHEN uf.follower_id = ? AND uf.status = '0' THEN 1 -- Users who sent follow request first
+                WHEN uf.follower_id = ? AND uf.status = '0' THEN 1 -- Users who sent you a request first
                 ELSE 2 -- All others next
             END`,
       {
@@ -959,7 +959,7 @@ const getAllUsers = async (req, res) => {
     );
 
     let userCount = 0;
-    
+
     for (let i = 0; i < users.length; i++) {
       if (users[i].FSTATUS === '0') {
         userCount++;
@@ -1018,6 +1018,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
 
 
 
