@@ -338,7 +338,7 @@ const updateUserType = async (req, res) => {
     res.json({ error: false, message: 'User type updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Data not updated!!!' });
   }
 };
 
@@ -397,7 +397,7 @@ const createUserProfile = async (req, res) => {
 
   } catch (error) {
     console.error('Error creating personal profile:', error);
-    return res.status(500).json({ error: true, message: 'Internal server error' });
+    return res.status(500).json({ error: true, message: 'Personal Profile not created!!!' });
   }
 };
 
@@ -461,7 +461,7 @@ const updateUserPersonalProfile = async (req, res) => {
 
   } catch (error) {
     console.error('Error updating personal profile:', error);
-    return res.status(500).json({ error: true, message: 'Internal server error' });
+    return res.status(500).json({ error: true, message: 'Personal profile not updated!!!' });
   }
 };
 
@@ -516,7 +516,7 @@ const createBusinessProfile = async (req, res) => {
       res.status(400).json({ error: true, message: 'Business Profile is already exist' });
     }
   } catch (error) {
-    res.status(500).json({ error: true, message: error });
+    res.status(500).json({ error: true, message: 'Business profile not created!!!' });
   }
 };
 
@@ -573,7 +573,7 @@ const updateBusinessProfile = async (req, res) => {
     }
   } catch (error) {
     console.error('Error updating Business Profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Business profile not updated!!!' });
   }
 };
 
@@ -609,11 +609,11 @@ const createRequirement = async (req, res) => {
         res.status(200).json({ message: 'Requirement created!', error: false });
       }
     } else {
-      res.status(400).json({ message: 'Data not inserted', error: true });
+      res.status(400).json({ message: 'Requirement not created!!!', error: true });
     }
   } catch (error) {
     console.error('Error creating Requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not created!!!', error: true });
   }
 };
 
@@ -623,11 +623,19 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     const { userId } = req.body;
 
     // Fetch users who follow or are followed by the given user
+    // const users = await sequelize.query(
+    //   `SELECT id FROM register
+    //   WHERE id != :userId 
+    //   AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
+    //        OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+    //   {
+    //     replacements: { userId },
+    //     type: sequelize.QueryTypes.SELECT
+    //   }
+    // );
+
     const users = await sequelize.query(
-      `SELECT id FROM register
-      WHERE id != :userId 
-      AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
-           OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+      `SELECT id FROM register`,
       {
         replacements: { userId },
         type: sequelize.QueryTypes.SELECT
@@ -731,7 +739,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
     res.status(200).json({ error: false, message: "Requirements Fetched", allRequirment: resultArray });
   } catch (error) {
     console.error('Error fetching user requirements:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not found!!!', error: true });
   }
 };
 
@@ -751,7 +759,7 @@ const unFollowUser = async (req, res) => {
     res.json({ error: false, message: "You have unfollow this user" });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'User Unfollow failed!!!' });
   }
 };
 
@@ -805,7 +813,7 @@ const saveRequirement = async (req, res) => {
     }
   } catch (error) {
     console.error('Error saving requirement:', error);
-    return res.status(500).json({ message: 'Internal server error', error: true });
+    return res.status(500).json({ message: 'Failed to save requirement!!!', error: true });
   }
 };
 
@@ -853,7 +861,7 @@ const getSavedRequirements = async (req, res) => {
     res.status(200).json({ error: false, message: "Requirements fetched successfully", allRequirment: resultArray });
   } catch (error) {
     console.error('Error fetching saved requirements:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirements not found', error: true });
   }
 };
 
@@ -921,10 +929,10 @@ const getAllUserRequirements = async (req, res) => {
 
     const resultArray = Object.values(groupedRequirements);
 
-    res.status(200).json({ error: false, message: "Requirment Fetch", allRequirment: resultArray });
+    res.status(200).json({ error: false, message: "Requirement Fetch", allRequirment: resultArray });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not found', error: true });
   }
 };
 
@@ -1015,7 +1023,7 @@ const getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'User data not found', error: true });
   }
 };
 
@@ -1052,7 +1060,7 @@ const getFollowAllUsers = async (req, res) => {
     res.status(200).json({ error: false, message: "User Data Fetch", allUsers: usersWithFollowers });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'User not found', error: true });
   }
 };
 
@@ -1070,7 +1078,7 @@ const getPersonalProfile = async (req, res) => {
     res.status(200).json({ error: false, message: "User Data Fetch", personalProfile: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'User not found', error: true });
   }
 };
 
@@ -1088,7 +1096,7 @@ const getBusinessProfile = async (req, res) => {
     res.status(200).json({ error: false, message: "User Data Fetch", businessProfile: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'User not found', error: true });
   }
 };
 
@@ -1143,7 +1151,7 @@ const getRegisterCount = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching register counts:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Data not found' });
   }
 };
 
@@ -1253,7 +1261,7 @@ const sendFollowRequest = async (req, res) => {
     // Check if the subscription is expired
 
   } catch (error) {
-    res.status(500).json({ error: true, message: error });
+    res.status(500).json({ error: true, message: "Request not sent" });
   }
 };
 
@@ -1271,7 +1279,7 @@ const getFollowRequest = async (req, res) => {
     res.status(200).json({ error: false, message: "Follow Request Fetch", followRequest: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Request not found', error: true });
   }
 };
 
@@ -1297,7 +1305,7 @@ const updateRequestStatus = async (req, res) => {
     res.json({ error: false, message: msg });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Request accept or decline failed' });
   }
 };
 
@@ -1330,7 +1338,7 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).send({
-      message: 'Error in login check api!',
+      message: 'Login failed!!!',
       error
     });
   }
@@ -1371,7 +1379,7 @@ const updateUserProfile = async (req, res) => {
     res.json({ message: 'User profile updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'User profile not updated!!!' });
   }
 };
 
@@ -1412,7 +1420,7 @@ const getImage = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: 'error in file upload api!' });
+    res.status(500).json({ message: 'file upload failed!!!' });
   }
 }
 
@@ -1434,20 +1442,9 @@ const updatepassword = async (req, res) => {
     res.json({ message: 'password updated successfully' });
   } catch (error) {
     console.error('Error updating password:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Password update failed' });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
 
 // const findRoomByUserId = async (req, res) => {
 //   try {
@@ -1497,7 +1494,7 @@ const sendMessageRoom = async (req, res) => {
     res.status(200).json({ error: false, message: "send success " });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message send failed!!!', error: true });
   }
 }
 
@@ -1634,7 +1631,7 @@ const getAllUsersIfFollow = async (req, res) => {
     res.status(200).json({ error: false, message: "Users fetched successfully", chatUsers: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'User not found!!!' });
   }
 };
 
@@ -1655,7 +1652,7 @@ const markMessagesAsSeen = async (req, res) => {
     res.status(200).json({ error: false, message: "Messages marked as seen" });
   } catch (error) {
     console.error('Error updating message status:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message not marked as seen', error: true });
   }
 };
 
@@ -1696,7 +1693,7 @@ const createRoom = async (req, res) => {
     res.status(200).json({ error: false, message: 'Room Created Successfully' });
   } catch (error) {
     console.error('Error creating room:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Room not created!!!' });
   }
 };
 
@@ -1769,7 +1766,7 @@ const findRoomByUserId = async (req, res) => {
     res.status(200).json({ error: false, message: "Rooms fetched successfully", roomDetails: roomDetails });
   } catch (error) {
     console.error('Error fetching rooms:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Rooms not found' });
   }
 };
 
@@ -1796,7 +1793,7 @@ const sendMessage = async (req, res) => {
     res.status(200).json({ error: false, message: "Send success" });
   } catch (error) {
     console.error('Error sending message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message send failed', error: true });
   }
 };
 
@@ -1884,7 +1881,7 @@ const getMessages = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching messages:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message not found', error: true });
   }
 };
 
@@ -1909,7 +1906,7 @@ const getMessagesRoom = async (req, res) => {
     res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message not found', error: true });
   }
 }
 
@@ -1946,7 +1943,7 @@ const getAllUserPrductService = async (req, res) => {
     res.status(200).json({ error: false, message: "Product Fetch", allProducts: resultArray });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Product not found', error: true });
   }
 };
 
@@ -1958,11 +1955,19 @@ const getUserStory = async (req, res) => {
     // const userId = req.user.id;
     const { userId } = req.body;
 
+    // const users = await sequelize.query(
+    //   `SELECT id,name FROM register
+    //   WHERE id != :userId 
+    //   AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
+    //        OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+    //   {
+    //     replacements: { userId },
+    //     type: sequelize.QueryTypes.SELECT
+    //   }
+    // );
+
     const users = await sequelize.query(
-      `SELECT id FROM register
-      WHERE id != :userId 
-      AND (id IN (SELECT user_id FROM user_follower WHERE follower_id = :userId AND status = '0')
-           OR id IN (SELECT follower_id FROM user_follower WHERE user_id = :userId AND status = '0'))`,
+      `SELECT id,name FROM register`,
       {
         replacements: { userId },
         type: sequelize.QueryTypes.SELECT
@@ -1979,7 +1984,7 @@ const getUserStory = async (req, res) => {
 
     const status = "1";
     const usersStory = await sequelize.query(
-      'SELECT * FROM ads_photo WHERE user_id IN (:idArray) AND user_id != :userId AND status = :status AND NOW() <= DATE_ADD(created_at, INTERVAL CAST(story_time AS UNSIGNED) HOUR)',
+      'SELECT ads_photo.*,register.name FROM ads_photo INNER JOIN register ON ads_photo.user_id = register.id WHERE ads_photo.user_id IN (:idArray) AND ads_photo.user_id != :userId AND ads_photo.status = :status AND NOW() <= DATE_ADD(ads_photo.created_at, INTERVAL CAST(ads_photo.story_time AS UNSIGNED) HOUR)',
       {
         replacements: { idArray, userId, status },
         type: QueryTypes.SELECT
@@ -1988,7 +1993,7 @@ const getUserStory = async (req, res) => {
     res.status(200).json({ error: false, message: "User Story Fetch", UserStory: usersStory });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Story not found', error: true });
   }
 };
 
@@ -2006,7 +2011,7 @@ const getOwnUserStory = async (req, res) => {
     res.status(200).json({ error: false, message: "User Story Fetch", UserStory: usersStory });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Story not found', error: true });
   }
 };
 
@@ -2032,7 +2037,7 @@ const deleteUserStory = async (req, res) => {
     res.status(200).json({ message: 'Requirement deleted successfully', error: false });
   } catch (error) {
     console.error('Error deleting requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not deleted', error: true });
   }
 };
 
@@ -2058,7 +2063,7 @@ const deleteRequirement = async (req, res) => {
     res.status(200).json({ message: 'Requirement deleted successfully', error: false });
   } catch (error) {
     console.error('Error deleting requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not deleted', error: true });
   }
 };
 
@@ -2084,7 +2089,7 @@ const updateRequirementStatus = async (req, res) => {
     res.status(200).json({ message: 'Requirement status updated successfully', error: false });
   } catch (error) {
     console.error('Error updating requirement status:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not updated', error: true });
   }
 };
 
@@ -2146,10 +2151,10 @@ const clickSellIt = async (req, res) => {
       );
     }
 
-    res.status(200).json({ error: false, message: "Send success" });
+    res.status(200).json({ error: false, message: "Requirement Completed" });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not completed', error: true });
   }
 };
 
@@ -2170,7 +2175,7 @@ const getClickSellIt = async (req, res) => {
     res.status(200).json({ error: false, message: "Message Fetch Successfully", messages: messages });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Message not found', error: true });
   }
 }
 
@@ -2189,7 +2194,7 @@ const updateUserToken = async (req, res) => {
     res.json({ error: false, message: 'User token updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Token not updated' });
   }
 };
 
@@ -2208,7 +2213,7 @@ const getUserToken = async (req, res) => {
     res.status(200).json({ error: false, message: "User Token Fetch", UserToken: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'token not found', error: true });
   }
 };
 
@@ -2282,7 +2287,7 @@ const createStory = async (req, res) => {
 
 
   } catch (error) {
-    res.status(500).json({ error: true, message: error });
+    res.status(500).json({ error: true, message: "Story not created" });
   }
 };
 
@@ -2320,7 +2325,7 @@ const getRoomUserToken = async (req, res) => {
     res.status(200).json({ error: false, message: "User Token Fetch", roomUserToken: roomDetails });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Token not found', error: true });
   }
 };
 
@@ -2352,12 +2357,12 @@ const loginUserAdmin = async (req, res) => {
 
       return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId, type: type, status: status });
     } else {
-      return res.status(404).send({ error: true, message: 'Mobile Number not found! Sign up!' });
+      return res.status(404).send({ error: true, message: 'Login failed' });
     }
   } catch (error) {
     console.log(error);
     res.status(500).send({
-      message: 'Error in login check api!',
+      message: 'Login Failed',
       error
     });
   }
@@ -2504,10 +2509,10 @@ const fetchUsersForAdmin = async (req, res) => {
 
 
     // Send response with user details and total count
-    res.status(200).json({ error: false, totalUsers, topUsers: userComplatedReq, totalUsersCurrentDate, users: userDetails });
+    res.status(200).json({ error: false,message: "User Fetch successfully", totalUsers, topUsers: userComplatedReq, totalUsersCurrentDate, users: userDetails });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: true,message: "User not found" });
   }
 };
 
@@ -2561,10 +2566,10 @@ const fetchUserProfile = async (req, res) => {
       profile: profileData[0] || null // Assuming profileData is an array
     };
 
-    res.status(200).json({ error: false, user: userDetails });
+    res.status(200).json({ error: false, user: userDetails,message: 'User Details found' });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'User Details not found' });
   }
 };
 
@@ -2637,7 +2642,7 @@ const fetchUsersForAdminPersonal = async (req, res) => {
     res.status(200).json({ error: false, totalUsers, totalUsersCurrentDate, TotalUserToday, TotalUser, users: userDetails });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: true });
   }
 };
 
@@ -2683,7 +2688,7 @@ const fetchUserRequirements = async (req, res) => {
     res.status(200).json({ requirements, totalRequirements: requirementCount[0].count, error: false });
   } catch (error) {
     console.error('Error fetching user requirements:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'User requirement not found', error: true });
   }
 };
 
@@ -2723,7 +2728,7 @@ const fetchUserRequirementsLetter = async (req, res) => {
     res.status(200).json({ requirements, error: false });
   } catch (error) {
     console.error('Error fetching user requirements:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not found', error: true });
   }
 };
 
@@ -2862,7 +2867,7 @@ const fetchRequirementDetails = async (req, res) => {
 
     console.error('Error fetching user profile:', error);
 
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement details fetch', error: true });
 
   }
 
@@ -2999,7 +3004,7 @@ const fetchTopUsersWithCompletedRequirements = async (req, res) => {
     res.status(200).json({ error: false, topUsers: userDetails });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: true });
   }
 };
 
@@ -3020,7 +3025,7 @@ const getUserPlan = async (req, res) => {
     res.status(200).json({ error: false, message: "User Plan Fetch", UserPlan: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'User plan not found', error: true });
   }
 };
 
@@ -3040,7 +3045,7 @@ const verifyBusinessProfile = async (req, res) => {
     res.json({ error: false, message: 'Business Verified successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Business verification failed' });
   }
 };
 
@@ -3058,7 +3063,7 @@ const getUserStorybyId = async (req, res) => {
     res.status(200).json({ error: false, message: "User Story Fetch", UserStory: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Story not found', error: true });
   }
 };
 
@@ -3076,7 +3081,7 @@ const verifyStory = async (req, res) => {
     res.json({ error: false, message: 'Business Story Verified successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'Business story verification failed' });
   }
 };
 
@@ -3228,7 +3233,7 @@ const createProduct = async (req, res) => {
     }
   } catch (error) {
     console.error('Error creating product:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Data not inserted', error: true });
   }
 };
 
@@ -3273,7 +3278,7 @@ const updateProductService = async (req, res) => {
     res.status(200).json({ message: 'Requirement updated successfully!', error: false });
   } catch (error) {
     console.error('Error updating Requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not updated', error: true });
   }
 };
 
@@ -3295,7 +3300,7 @@ const deleteImageProductService = async (req, res) => {
     res.status(200).json({ message: 'Image deleted successfully!', error: false });
   } catch (error) {
     console.error('Error deleting image:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Image deletion failed', error: true });
   }
 };
 
@@ -3317,7 +3322,7 @@ const deleteImage = async (req, res) => {
     res.status(200).json({ message: 'Image deleted successfully!', error: false });
   } catch (error) {
     console.error('Error deleting image:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Image deletion failed', error: true });
   }
 };
 
@@ -3381,7 +3386,7 @@ const updateRequirement = async (req, res) => {
     // }
   } catch (error) {
     console.error('Error updating Requirement:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Requirement not updated', error: true });
   }
 };
 
@@ -3415,7 +3420,7 @@ const addReviews = async (req, res) => {
     res.status(200).json({ error: false, message: "Review added" });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Review not added', error: true });
   }
 };
 
@@ -3433,7 +3438,7 @@ const getUserReviews = async (req, res) => {
     res.status(200).json({ error: false, message: "Reviews found", UserReviews: users });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    res.status(500).json({ messsage: 'Review not found', error: true });
   }
 };
 
@@ -3480,7 +3485,7 @@ const addCareer = async (req, res) => {
     res.status(200).json({ error: false, message: "Add successfully" });
   } catch (error) {
     console.error('Error fetching message:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'Career not added', error: true });
   }
 }
 
@@ -3564,7 +3569,7 @@ const getAllUsersTest = async (req, res) => {
     res.status(200).json({ error: false, message: "User Data Fetch", allUsers: users, userCount: userCount });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    res.status(500).json({ message: 'User not found', error: true });
   }
 };
 
@@ -3628,7 +3633,7 @@ const deleteAccount = async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting user account:', error);
-    res.status(500).json({ error: true, message: 'Internal server error' });
+    res.status(500).json({ error: true, message: 'User account not deleted' });
   }
 };
 
